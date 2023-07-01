@@ -6,7 +6,7 @@
 #define PLOTTING_DRONE_H
 
 #include <cmath>
-#include "algebra.h"
+#include <algebra.h>
 
 class Drone {
 public:

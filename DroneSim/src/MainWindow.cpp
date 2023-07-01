@@ -5,14 +5,13 @@
 #include "MainWindow.h"
 
 template<typename ... Args>
-std::string string_format( const std::string& format, Args ... args )
-{
-    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
-    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+std::string string_format(const std::string &format, Args ... args) {
+    int size_s = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+    if (size_s <= 0) { throw std::runtime_error("Error during formatting."); }
     auto size = static_cast<size_t>( size_s );
-    std::unique_ptr<char[]> buf( new char[ size ] );
-    std::snprintf( buf.get(), size, format.c_str(), args ... );
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+    std::unique_ptr<char[]> buf(new char[size]);
+    std::snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
 MainWindow::MainWindow() {
@@ -56,9 +55,11 @@ void MainWindow::update_sim_ui() {
     auto r = drone.arm_len;
 
     position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
-    rotation->setText(QString::fromStdString(string_format("Rotation: P: %.2f; R: %.2f; Y: %.2f; (rad)", pitch, roll, yaw)));
+    rotation->setText(
+            QString::fromStdString(string_format("Rotation: P: %.2f; R: %.2f; Y: %.2f; (rad)", pitch, roll, yaw)));
     velocity->setText(QString::fromStdString(string_format("Velocity: X: %.2f; Y: %.2f; Z: %.2f; (m/s)", vx, vy, vz)));
-    angular->setText(QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
+    angular->setText(
+            QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
 
 
     Vector3 fr{cos(yaw) - sin(yaw), sin(yaw) + cos(yaw), r * sin(pitch) + r * sin(roll)};
@@ -85,7 +86,7 @@ void MainWindow::update_sim_ui() {
     vis_series.dataProxy()->resetArray(&vis_data);
 }
 
-QWidget* MainWindow::init_vis(QWidget* parent){
+QWidget *MainWindow::init_vis(QWidget *parent) {
     vis_series.setItemSize(0.1);
     vis_plot = new Q3DScatter();
     vis_plot->scene()->activeCamera()->setCameraPreset(Q3DCamera::CameraPresetIsometricRight);
@@ -116,7 +117,7 @@ QWidget* MainWindow::init_vis(QWidget* parent){
     return m_container;
 }
 
-QWidget* MainWindow::init_bars(QWidget* parent){
+QWidget *MainWindow::init_bars(QWidget *parent) {
     auto bar_widget = new QWidget(parent);
     auto bar_layout = new QGridLayout(bar_widget);
 
@@ -149,14 +150,14 @@ QWidget* MainWindow::init_bars(QWidget* parent){
     return bar_widget;
 }
 
-QWidget* MainWindow::init_data(QWidget* parent) {
+QWidget *MainWindow::init_data(QWidget *parent) {
     auto data_widget = new QWidget(parent);
     auto layout = new QVBoxLayout(data_widget);
 
-    position = new QLabel("Position: X: 0.0 Y: 0.0 Z: 0.0 (m)");
-    rotation = new QLabel("Rotation: P: 0.0 R: 0.0 Y: 0.0 (deg)");
-    velocity = new QLabel("Velocity: X: 0.0 Y: 0.0 Z: 0.0 (m/s)");
-    angular = new QLabel("Angular V.: P: 0.0 R: 0.0 Y: 0.0 (deg/s)");
+    position = new QLabel("", data_widget);
+    rotation = new QLabel("", data_widget);
+    velocity = new QLabel("", data_widget);
+    angular = new QLabel("", data_widget);
 
     layout->addWidget(position);
     layout->addWidget(rotation);
@@ -166,7 +167,7 @@ QWidget* MainWindow::init_data(QWidget* parent) {
     return data_widget;
 }
 
-void MainWindow::update_sim(){
+void MainWindow::update_sim() {
     update_sim_ui();
 }
 
