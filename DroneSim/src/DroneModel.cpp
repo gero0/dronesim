@@ -29,11 +29,17 @@ void DroneModel::update(float dt) {
 
     float thrust = thrust_fl + thrust_fr + thrust_br + thrust_bl;
     float mass = (body_mass + 4.0f * motor_mass);
-    Vector3 acceleration{
-//            -cosf(rotation.yaw) * sinf(rotation.roll) * thrust / mass,
-//            -cosf(rotation.yaw) * sinf(rotation.pitch) * thrust / mass,
+    Vector3 acceleration_local{
+//            sinf(rotation.yaw) * -sinf(rotation.roll) * thrust / mass,
+//            sinf(rotation.yaw) * -sinf(rotation.pitch) * thrust / mass,
             -sinf(rotation.roll) * thrust / mass,
             -sinf(rotation.pitch) * thrust / mass,
+            (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
+    };
+
+    Vector3 acceleration{
+            (sinf(rotation.yaw)*sinf(rotation.pitch)*cosf(rotation.roll) - cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
+            -(cosf(rotation.yaw)*sinf(rotation.pitch)*cosf(rotation.roll) + sinf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
             (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
     };
 
@@ -50,7 +56,7 @@ void DroneModel::update(float dt) {
         velocity.z = 0.0f;
     }
 
-    sensor_mock.acceleration = acceleration;
+    sensor_mock.acceleration = acceleration_local;
     sensor_mock.angular_acceleration = {pitch_acc, yaw_acc, roll_acc};
     sensor_mock.altitude = position.z;
 

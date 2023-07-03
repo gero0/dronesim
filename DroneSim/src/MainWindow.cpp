@@ -30,6 +30,7 @@ MainWindow::MainWindow() {
     spbar.setHorizontalStretch(1);
 
     data_widget->setMinimumWidth(400);
+    bar_widget->setMinimumWidth(300);
 
     vis_widget->setSizePolicy(spvis);
     bar_widget->setSizePolicy(spbar);
@@ -45,26 +46,51 @@ MainWindow::MainWindow() {
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update_sim()));
-    timer->start(10);
+    timer->start(dt * 1000);
 }
 
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+    auto setpoints = drone.controller.get_setpoints();
+    if (event->key() == Qt::Key_W) {
+        drone.controller.set_pitch(setpoints.v_pitch - 0.05f);
+    } else if (event->key() == Qt::Key_S) {
+        drone.controller.set_pitch(setpoints.v_pitch + 0.05f);
+    }else if (event->key() == Qt::Key_D) {
+        drone.controller.set_roll(setpoints.v_roll - 0.05f);
+    }else if (event->key() == Qt::Key_A) {
+        drone.controller.set_roll(setpoints.v_roll + 0.05f);
+    }else if (event->key() == Qt::Key_Q) {
+        drone.controller.set_yaw(setpoints.v_yaw + 0.05f);
+    }else if (event->key() == Qt::Key_E) {
+        drone.controller.set_yaw(setpoints.v_yaw - 0.05f);
+    }else if (event->key() == Qt::Key_Shift) {
+        drone.controller.set_altitude(setpoints.v_thrust + 0.5f);
+    }else if (event->key() == Qt::Key_Control) {
+        drone.controller.set_altitude(setpoints.v_thrust - 0.5f);
+    }
+}
 
 void MainWindow::update_sim_ui() {
-    drone.update(0.01);
+    drone.update(dt);
 
+    bar_fl->setValue(static_cast<int> (drone.fl_driver.get_speed() * 100.0f));
+    bar_fr->setValue(static_cast<int> (drone.fr_driver.get_speed() * 100.0f));
+    bar_bl->setValue(static_cast<int> (drone.bl_driver.get_speed() * 100.0f));
+    bar_br->setValue(static_cast<int> (drone.br_driver.get_speed() * 100.0f));
+
+    label_fl->setText("Front Left: " + QString::number(bar_fl->value()) + "%");
+    label_fr->setText("Front Right: " + QString::number(bar_fr->value()) + "%");
+    label_bl->setText("Back Left: " + QString::number(bar_bl->value()) + "%");
+    label_br->setText("Back Right: " + QString::number(bar_br->value()) + "%");
+
+    draw_scatter();
+    draw_text();
+}
+
+void MainWindow::draw_scatter() {
     auto [x, y, z] = drone.position;
     auto [pitch, yaw, roll] = drone.rotation;
-    auto [vx, vy, vz] = drone.velocity;
-    auto [vp, vyaw, vr] = drone.angular_velocity;
-    float r = sqrt(2);
-
-    position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
-    rotation->setText(
-            QString::fromStdString(string_format("Rotation: P: %.2f; R: %.2f; Y: %.2f; (rad)", pitch, roll, yaw)));
-    velocity->setText(QString::fromStdString(string_format("Velocity: X: %.2f; Y: %.2f; Z: %.2f; (m/s)", vx, vy, vz)));
-    angular->setText(
-            QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
-
+    const float r = 2.0f;
 
     Vector3 fr{cosf(yaw) - sinf(yaw), sinf(yaw) + cosf(yaw), r * sinf(pitch) + r * sinf(roll)};
     Vector3 fl{-cosf(yaw) - sinf(yaw), -sinf(yaw) + cosf(yaw), r * sinf(pitch) - r * sinf(roll)};
@@ -89,24 +115,48 @@ void MainWindow::update_sim_ui() {
 
     vis_series.dataProxy()->resetArray(&vis_data);
 
-    Bar_fl->setValue(static_cast<int> (drone.fl_driver.get_speed() * 100.0f));
-    Bar_fr->setValue(static_cast<int> (drone.fr_driver.get_speed() * 100.0f));
-    Bar_bl->setValue(static_cast<int> (drone.bl_driver.get_speed() * 100.0f));
-    Bar_br->setValue(static_cast<int> (drone.br_driver.get_speed() * 100.0f));
+    rescale_axes();
+}
 
-    if(x < vis_plot->axes()[0]->min()){
-        auto new_min = vis_plot->axes()[0]->min() - 10.0;
-        auto new_max = vis_plot->axes()[0]->min();
-        vis_plot->axes()[0]->setMin(new_min);
-        vis_plot->axes()[0]->setMax(new_max);
+void MainWindow::rescale_axes() {
+    auto [x, y, z] = drone.position;
+    float pos[3] = {x, z, y};
+    for (int i = 0; i < 3; i++) {
+        auto &ax = vis_plot->axes()[i];
+        if (pos[i] > ax->max()) {
+            auto diff = ax->max() - ax->min();
+            ax->setRange(ax->max(), ax->max() + diff);
+        } else if (pos[i] < ax->min()) {
+            auto diff = ax->max() - ax->min();
+            ax->setRange(ax->min() - diff, ax->min());
+        }
     }
+}
 
-    if(y < vis_plot->axes()[2]->min()){
-        auto new_min = vis_plot->axes()[2]->min() - 10.0;
-        auto new_max = vis_plot->axes()[2]->min();
-        vis_plot->axes()[2]->setMin(new_min);
-        vis_plot->axes()[2]->setMax(new_max);
-    }
+void MainWindow::draw_text() {
+    auto [x, y, z] = drone.position;
+    auto [pitch, yaw, roll] = drone.rotation;
+    auto [vx, vy, vz] = drone.velocity;
+    auto [vp, vyaw, vr] = drone.angular_velocity;
+
+    position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
+    rotation->setText(
+            QString::fromStdString(string_format("Rotation: P: %.2f; R: %.2f; Y: %.2f; (rad)", pitch, roll, yaw)));
+    velocity->setText(QString::fromStdString(string_format("Velocity: X: %.2f; Y: %.2f; Z: %.2f; (m/s)", vx, vy, vz)));
+    angular->setText(
+            QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
+
+    PidValues pid = drone.controller.get_last_pid();
+    PidValues setpoints = drone.controller.get_setpoints();
+
+    pid_out->setText(QString::fromStdString(
+            string_format("PID: Thrust: %.4f; Pitch: %.4f; Roll:%.4f ; Yaw: %.4f;", pid.v_thrust, pid.v_pitch,
+                          pid.v_roll, pid.v_yaw)));
+
+    pid_setpoints->setText(QString::fromStdString(
+            string_format("Setpoints: Altitude: %.2f; Pitch: %.2f; Roll:%.2f ; Yaw: %.2f;", setpoints.v_thrust,
+                          setpoints.v_pitch,
+                          setpoints.v_roll, setpoints.v_yaw)));
 }
 
 QWidget *MainWindow::init_vis(QWidget *parent) {
@@ -144,29 +194,29 @@ QWidget *MainWindow::init_bars(QWidget *parent) {
     auto bar_widget = new QWidget(parent);
     auto bar_layout = new QGridLayout(bar_widget);
 
-    Bar_fl = new QProgressBar(bar_widget);
-    Bar_fl->setOrientation(Qt::Orientation::Vertical);
-    Bar_fr = new QProgressBar(bar_widget);
-    Bar_fr->setOrientation(Qt::Orientation::Vertical);
-    Bar_bl = new QProgressBar(bar_widget);
-    Bar_bl->setOrientation(Qt::Orientation::Vertical);
-    Bar_br = new QProgressBar(bar_widget);
-    Bar_br->setOrientation(Qt::Orientation::Vertical);
+    bar_fl = new QProgressBar(bar_widget);
+    bar_fl->setOrientation(Qt::Orientation::Vertical);
+    bar_fr = new QProgressBar(bar_widget);
+    bar_fr->setOrientation(Qt::Orientation::Vertical);
+    bar_bl = new QProgressBar(bar_widget);
+    bar_bl->setOrientation(Qt::Orientation::Vertical);
+    bar_br = new QProgressBar(bar_widget);
+    bar_br->setOrientation(Qt::Orientation::Vertical);
 
-    auto label_fl = new QLabel("Front Left", bar_widget);
-    auto label_fr = new QLabel("Front Right", bar_widget);
-    auto label_bl = new QLabel("Back Left", bar_widget);
-    auto label_br = new QLabel("Back Right", bar_widget);
+    label_fl = new QLabel("Front Left", bar_widget);
+    label_fr = new QLabel("Front Right", bar_widget);
+    label_bl = new QLabel("Back Left", bar_widget);
+    label_br = new QLabel("Back Right", bar_widget);
 
     bar_layout->addWidget(label_fl, 0, 0);
     bar_layout->addWidget(label_fr, 0, 1);
-    bar_layout->addWidget(Bar_fl, 1, 0);
-    bar_layout->addWidget(Bar_fr, 1, 1);
+    bar_layout->addWidget(bar_fl, 1, 0);
+    bar_layout->addWidget(bar_fr, 1, 1);
 
     bar_layout->addWidget(label_bl, 2, 0);
     bar_layout->addWidget(label_br, 2, 1);
-    bar_layout->addWidget(Bar_bl, 3, 0);
-    bar_layout->addWidget(Bar_br, 3, 1);
+    bar_layout->addWidget(bar_bl, 3, 0);
+    bar_layout->addWidget(bar_br, 3, 1);
 
     bar_widget->setLayout(bar_layout);
 
@@ -181,11 +231,15 @@ QWidget *MainWindow::init_data(QWidget *parent) {
     rotation = new QLabel("", data_widget);
     velocity = new QLabel("", data_widget);
     angular = new QLabel("", data_widget);
+    pid_out = new QLabel("", data_widget);
+    pid_setpoints = new QLabel("", data_widget);
 
     layout->addWidget(position);
     layout->addWidget(rotation);
     layout->addWidget(velocity);
     layout->addWidget(angular);
+    layout->addWidget(pid_out);
+    layout->addWidget(pid_setpoints);
 
     return data_widget;
 }

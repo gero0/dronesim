@@ -24,7 +24,7 @@ public:
     const float yaw_coeff = 0.01f;
     const float body_mass = 2.0f;
     const float body_radius = 0.03f;
-    const float motor_mass = 0.030;
+    const float motor_mass = 0.03f;
     const float g = 9.8;
 
     const float rp_inertia_moment =

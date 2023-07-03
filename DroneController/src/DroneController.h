@@ -9,6 +9,13 @@
 #include "MotorDriver.h"
 #include "PID.h"
 
+struct PidValues{
+    float v_thrust;
+    float v_pitch;
+    float v_roll;
+    float v_yaw;
+};
+
 class DroneController {
 public:
     DroneController(MotorDriver *front_left, MotorDriver *front_right, MotorDriver *back_left,
@@ -18,6 +25,12 @@ public:
     }
 
     void update(float dt);
+    PidValues get_last_pid();
+    PidValues get_setpoints();
+    void set_altitude(float sp);
+    void set_pitch(float sp);
+    void set_roll(float sp);
+    void set_yaw(float sp);
 
 private:
     SensorReader *sensor_reader;
@@ -25,7 +38,12 @@ private:
     float yaw_setpoint = 0.0f;
     float pitch_setpoint = 0.0f;
     float roll_setpoint = 0.0f;
-    float altitude_setpoint = 15.0f;
+    float altitude_setpoint = 0.0f;
+
+    float v_thrust = 0.0f;
+    float v_pitch = 0.0f;
+    float v_roll = 0.0f;
+    float v_yaw = 0.0f;
 
     MotorDriver *front_left;
     MotorDriver *front_right;

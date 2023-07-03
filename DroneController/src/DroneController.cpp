@@ -3,7 +3,6 @@
 //
 
 #include "DroneController.h"
-#include <algorithm>
 #include <iostream>
 
 void DroneController::update(float dt) {
@@ -19,15 +18,37 @@ void DroneController::update(float dt) {
     rotation.roll += angular_velocity.roll * dt;
     rotation.yaw += angular_velocity.yaw * dt;
 
-    float v_thrust = thrust_pid.update(altitude_setpoint, altitude);
-    float v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch);
-    float v_roll = roll_pid.update(roll_setpoint, rotation.roll);
-    float v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw);
+    v_thrust = thrust_pid.update(altitude_setpoint, altitude);
+    v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch);
+    v_roll = roll_pid.update(roll_setpoint, rotation.roll);
+    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw);
 
-    std::cout << "Vpitch: " << v_pitch << "\n";
+    front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
+    front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+}
 
-    front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw,0.0f, 1.0f));
-    front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw,0.0f, 1.0f));
-    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw,0.0f, 1.0f));
-    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw,0.0f, 1.0f));
+PidValues DroneController::get_last_pid() {
+    return {v_thrust, v_pitch, v_roll, v_yaw};
+}
+
+PidValues DroneController::get_setpoints() {
+    return {altitude_setpoint, pitch_setpoint, roll_setpoint, yaw_setpoint};
+}
+
+void DroneController::set_yaw(float sp) {
+    yaw_setpoint = sp;
+}
+
+void DroneController::set_roll(float sp) {
+    roll_setpoint = sp;
+}
+
+void DroneController::set_pitch(float sp) {
+    pitch_setpoint = sp;
+}
+
+void DroneController::set_altitude(float sp) {
+    altitude_setpoint = sp;
 }
