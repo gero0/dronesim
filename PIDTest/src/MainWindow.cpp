@@ -24,6 +24,7 @@ QWidget *MainWindow::init_chart(QWidget *parent) {
     chart->legend()->setVisible(true);
 
     chart->axes()[1]->setMin(-0.3);
+    chart->axes()[1]->setMax(2.0);
     chart->axes()[0]->setMin(0.0);
     chart->axes()[0]->setMax(x_max);
 
@@ -98,8 +99,8 @@ MainWindow::MainWindow() {
 
     pid.set_tunings(0.1, 0.1, 0.000);
     pid.set_dt(dt);
-    pid.set_windup(-1.0, 1.0f);
-    pid.set_clamp(-1.0, 1.0);
+    pid.set_windup(0.0, 1.0f);
+    pid.set_clamp(0.0, 1.0);
 
     simtimer = new QTimer();
     connect(simtimer, SIGNAL(timeout()), this, SLOT(update_sim()));
@@ -113,7 +114,8 @@ void MainWindow::update_sim() {
     pid_inputs->append(current_time, sys_status);
     pid_outputs->append(current_time, pid_output);
 
-    sys_status += (pid_output) / (1.0f + alpha * dt);
+//    sys_status += (pid_output) / (1.0f + alpha * dt);
+    sys_status = model.update(dt, pid_output);
     current_time += dt;
 
     if (current_time > x_max) {
@@ -121,7 +123,7 @@ void MainWindow::update_sim() {
         pid_inputs->clear();
         pid_outputs->clear();
         chart->axes()[0]->setMin(x_max);
-        x_max += 1;
+        x_max += 3;
         chart->axes()[0]->setMax(x_max);
     }
 }

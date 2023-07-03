@@ -9,6 +9,7 @@
 #include <QMainWindow>
 #include <QtCharts>
 #include <PID.h>
+#include "DroneVerticalModel.h"
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -20,7 +21,8 @@ public:
     MainWindow();
 private:
     PID pid;
-    float dt = 0.001;
+    DroneVerticalModel model;
+    float dt = 0.01;
     float setpoint = 0.5;
     float current_time = 0.0f;
     float sys_status = 0.0f;

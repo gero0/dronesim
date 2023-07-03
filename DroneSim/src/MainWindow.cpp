@@ -48,11 +48,13 @@ MainWindow::MainWindow() {
 
 
 void MainWindow::update_sim_ui() {
+    drone.update(0.01);
+
     auto [x, y, z] = drone.position;
-    auto [pitch, roll, yaw] = drone.rotation;
+    auto [roll, pitch, yaw] = drone.rotation;
     auto [vx, vy, vz] = drone.velocity;
     auto [vp, vr, vyaw] = drone.angular_velocity;
-    auto r = drone.arm_len;
+    float r = sqrt(2);
 
     position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
     rotation->setText(
@@ -62,10 +64,10 @@ void MainWindow::update_sim_ui() {
             QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
 
 
-    Vector3 fr{cos(yaw) - sin(yaw), sin(yaw) + cos(yaw), r * sin(pitch) + r * sin(roll)};
-    Vector3 fl{-cos(yaw) - sin(yaw), -sin(yaw) + cos(yaw), r * sin(pitch) - r * sin(roll)};
-    Vector3 br{cos(yaw) + sin(yaw), sin(yaw) - cos(yaw), -r * sin(pitch) + r * sin(roll)};
-    Vector3 bl{-cos(yaw) + sin(yaw), -sin(yaw) - cos(yaw), -r * sin(pitch) - r * sin(roll)};
+    Vector3 fr{cosf(yaw) - sinf(yaw), sinf(yaw) + cosf(yaw), r * sinf(pitch) + r * sinf(roll)};
+    Vector3 fl{-cosf(yaw) - sinf(yaw), -sinf(yaw) + cosf(yaw), r * sinf(pitch) - r * sinf(roll)};
+    Vector3 br{cosf(yaw) + sinf(yaw), sinf(yaw) - cosf(yaw), -r * sinf(pitch) + r * sinf(roll)};
+    Vector3 bl{-cosf(yaw) + sinf(yaw), -sinf(yaw) - cosf(yaw), -r * sinf(pitch) - r * sinf(roll)};
 
     Vector3 front_right{x + fr.x, y + fr.y, z + fr.z};
     Vector3 front_left{x + fl.x, y + fl.y, z + fl.z};

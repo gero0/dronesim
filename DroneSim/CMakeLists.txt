@@ -11,5 +11,6 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ./src/*.cpp ./src/*.h)
 add_executable(DroneSim ${SOURCES})
 
 target_include_directories(DroneSim PRIVATE "../Utilities")
-target_link_libraries(DroneSim PRIVATE Utilities)
+target_include_directories(DroneSim PRIVATE "../DroneController/src")
+target_link_libraries(DroneSim PRIVATE Utilities DroneController)
 target_link_libraries(DroneSim PRIVATE Qt6::Widgets Qt6::Gui Qt6::DataVisualization)

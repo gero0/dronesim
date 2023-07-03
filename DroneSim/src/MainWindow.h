@@ -7,7 +7,7 @@
 
 #include <QtWidgets>
 #include <QtDataVisualization>
-#include "Drone.h"
+#include "DroneModel.h"
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -25,7 +25,7 @@ private:
     Q3DScatter *vis_plot;
     QScatter3DSeries vis_series;
     QScatterDataArray vis_data;
-    Drone drone;
+    DroneModel drone;
 
     QWidget* init_vis(QWidget* parent);
     QWidget* init_bars(QWidget* parent);
