@@ -29,6 +29,8 @@ MainWindow::MainWindow() {
     QSizePolicy spdata(QSizePolicy::Preferred, QSizePolicy::Preferred);
     spbar.setHorizontalStretch(1);
 
+    data_widget->setMinimumWidth(400);
+
     vis_widget->setSizePolicy(spvis);
     bar_widget->setSizePolicy(spbar);
     data_widget->setSizePolicy(spdata);
@@ -51,9 +53,9 @@ void MainWindow::update_sim_ui() {
     drone.update(0.01);
 
     auto [x, y, z] = drone.position;
-    auto [roll, pitch, yaw] = drone.rotation;
+    auto [pitch, yaw, roll] = drone.rotation;
     auto [vx, vy, vz] = drone.velocity;
-    auto [vp, vr, vyaw] = drone.angular_velocity;
+    auto [vp, vyaw, vr] = drone.angular_velocity;
     float r = sqrt(2);
 
     position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
@@ -86,6 +88,25 @@ void MainWindow::update_sim_ui() {
     vis_data << QVector3D(x, 0, y);
 
     vis_series.dataProxy()->resetArray(&vis_data);
+
+    Bar_fl->setValue(static_cast<int> (drone.fl_driver.get_speed() * 100.0f));
+    Bar_fr->setValue(static_cast<int> (drone.fr_driver.get_speed() * 100.0f));
+    Bar_bl->setValue(static_cast<int> (drone.bl_driver.get_speed() * 100.0f));
+    Bar_br->setValue(static_cast<int> (drone.br_driver.get_speed() * 100.0f));
+
+    if(x < vis_plot->axes()[0]->min()){
+        auto new_min = vis_plot->axes()[0]->min() - 10.0;
+        auto new_max = vis_plot->axes()[0]->min();
+        vis_plot->axes()[0]->setMin(new_min);
+        vis_plot->axes()[0]->setMax(new_max);
+    }
+
+    if(y < vis_plot->axes()[2]->min()){
+        auto new_min = vis_plot->axes()[2]->min() - 10.0;
+        auto new_max = vis_plot->axes()[2]->min();
+        vis_plot->axes()[2]->setMin(new_min);
+        vis_plot->axes()[2]->setMax(new_max);
+    }
 }
 
 QWidget *MainWindow::init_vis(QWidget *parent) {
@@ -123,13 +144,13 @@ QWidget *MainWindow::init_bars(QWidget *parent) {
     auto bar_widget = new QWidget(parent);
     auto bar_layout = new QGridLayout(bar_widget);
 
-    auto Bar_fl = new QProgressBar(bar_widget);
+    Bar_fl = new QProgressBar(bar_widget);
     Bar_fl->setOrientation(Qt::Orientation::Vertical);
-    auto Bar_fr = new QProgressBar(bar_widget);
+    Bar_fr = new QProgressBar(bar_widget);
     Bar_fr->setOrientation(Qt::Orientation::Vertical);
-    auto Bar_bl = new QProgressBar(bar_widget);
+    Bar_bl = new QProgressBar(bar_widget);
     Bar_bl->setOrientation(Qt::Orientation::Vertical);
-    auto Bar_br = new QProgressBar(bar_widget);
+    Bar_br = new QProgressBar(bar_widget);
     Bar_br->setOrientation(Qt::Orientation::Vertical);
 
     auto label_fl = new QLabel("Front Left", bar_widget);

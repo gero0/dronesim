@@ -10,7 +10,7 @@
 class SensorReader{
 public:
     virtual Vector3 getAcceleration() = 0;
-    virtual Vector3 getAngularAcceleration() = 0;
+    virtual Rotation getAngularAcceleration() = 0;
     virtual float getAltitude() = 0;
 };
 

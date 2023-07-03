@@ -35,6 +35,11 @@ private:
     QLabel* rotation;
     QLabel* velocity;
     QLabel* angular;
+
+    QProgressBar* Bar_fl;
+    QProgressBar* Bar_fr;
+    QProgressBar* Bar_bl;
+    QProgressBar* Bar_br;
 };
 
 

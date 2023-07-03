@@ -11,4 +11,10 @@ struct Vector3 {
     float z;
 };
 
+struct Rotation {
+    float pitch;
+    float yaw;
+    float roll;
+};
+
 #endif //PLOTTING_ALGEBRA_H

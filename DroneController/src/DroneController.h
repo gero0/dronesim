@@ -25,19 +25,20 @@ private:
     float yaw_setpoint = 0.0f;
     float pitch_setpoint = 0.0f;
     float roll_setpoint = 0.0f;
-    float altitude_setpoint = 10.0f;
+    float altitude_setpoint = 15.0f;
 
     MotorDriver *front_left;
     MotorDriver *front_right;
     MotorDriver *back_left;
     MotorDriver *back_right;
 
-    PID thrust_pid{0.05f, 0.01f, 0.05f, 0.1f, 0.0f, 1.0f};
-    PID pitch_pid{0.05f, 0.01f, 0.05f, 0.1f, 0.0f, 1.0f};
-    PID roll_pid{0.05f, 0.01f, 0.05f, 0.1f, 0.0f, 1.0f};
-    PID yaw_pid{0.05f, 0.01f, 0.05f, 0.1f, 0.0f, 1.0f};
+    PID thrust_pid{0.8f, 0.01f, 2.5f, 0.1f, 0.0f, 1.0f};
+    PID pitch_pid{0.1f, 0.1f, 0.1f, 0.1f, -1.0f, 1.0f};
+    PID roll_pid{0.1f, 0.1f, 0.1f, 0.1f, -1.0f, 1.0f};
+    PID yaw_pid{0.01f, 0.0f, 0.1f, 0.1f, -1.0f, 1.0f};
 
-    Vector3 rotation {0.0f, 0.0f, 0.0f};
+    Rotation rotation {0.0f, 0.0f, 0.0f};
+    Rotation angular_velocity {0.0f, 0.0f, 0.0f};
 };
 
 #endif //DRONESIMPROJECT_DRONECONTROLLER_H

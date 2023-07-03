@@ -12,7 +12,7 @@ public:
     Vector3 getAcceleration() override{
         return acceleration;
     }
-    Vector3 getAngularAcceleration() override{
+    Rotation getAngularAcceleration() override{
         return angular_acceleration;
     }
     float getAltitude() override{
@@ -20,7 +20,7 @@ public:
     }
 
     Vector3 acceleration {0.0f,0.0f,0.0f};
-    Vector3 angular_acceleration {0.0f,0.0f,0.0f};
+    Rotation angular_acceleration {0.0f,0.0f,0.0f};
     float altitude = 0.0f;
 };
 

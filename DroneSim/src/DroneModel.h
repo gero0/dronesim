@@ -14,15 +14,14 @@
 class DroneModel {
 public:
     Vector3 position{0.0, 0.0, 0.0};
-    Vector3 rotation{0.0, 0.0, 0.0};
     Vector3 velocity{0.0, 0.0, 0.0};
-    Vector3 angular_velocity{0.0, 0.0, 0.0};
+    Rotation rotation{0.0, 0.0, 0.0};
+    Rotation angular_velocity{0.0, 0.0, 0.0};
 //    Vector3 acceleration{0.0, 0.0, 0.0};
 //    Vector3 angular_acceleration{0.0, 0.0, 0.0};
     const float arm_len = 0.1f;
-    const float motor_max_speed = 2405.0f; // rad/s
-    const float lift_coeff = 0.00177f;
-    const float yaw_coeff = 0.0001f;
+    const float motor_max_thrust = 10.0f;//10N
+    const float yaw_coeff = 0.01f;
     const float body_mass = 2.0f;
     const float body_radius = 0.03f;
     const float motor_mass = 0.030;
@@ -36,7 +35,7 @@ public:
             ( 2.0f * body_mass * std::pow(body_radius, 2.0f) / 5.0f )
             + 4.0f * motor_mass * std::pow(arm_len, 2.0f);
 
-    float update(float dt);
+    void update(float dt);
 
     MotorDriverMock fl_driver;
     MotorDriverMock fr_driver;
