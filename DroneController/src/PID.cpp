@@ -12,10 +12,6 @@ void PID::set_tunings(float p, float i, float d){
     this->Kd = d;
 }
 
-void PID::set_dt(float dt){
-    this->dt = dt;
-}
-
 void PID::set_windup(float min, float max){
     this->windupMin = min;
     this->windupMax = max;
@@ -26,7 +22,7 @@ void PID::set_clamp(float min, float max){
     this->totalMax = max;
 }
 
-float PID::update(float setpoint, float process_value){
+float PID::update(float setpoint, float process_value, float dt){
     float error = setpoint - process_value;
     float pTerm = Kp * error;
 
@@ -53,4 +49,8 @@ void PID::set_Ki(float Ki) {
 
 void PID::set_Kd(float Kd) {
     this->Kd = Kd;
+}
+
+PidTunings PID::get_tunings() {
+    return {Kp, Ki, Kd};
 }

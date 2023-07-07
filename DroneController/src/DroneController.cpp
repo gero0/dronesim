@@ -18,15 +18,31 @@ void DroneController::update(float dt) {
     rotation.roll += angular_velocity.roll * dt;
     rotation.yaw += angular_velocity.yaw * dt;
 
-    v_thrust = thrust_pid.update(altitude_setpoint, altitude);
-    v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch);
-    v_roll = roll_pid.update(roll_setpoint, rotation.roll);
-    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw);
+    v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
+    v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
+    v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);
+    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
 
     front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
     front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
     back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
     back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+}
+
+PidTunings DroneController::get_thrust_tunings() {
+    return thrust_pid.get_tunings();
+}
+
+PidTunings DroneController::get_pitch_tunings() {
+    return pitch_pid.get_tunings();
+}
+
+PidTunings DroneController::get_roll_tunings() {
+    return roll_pid.get_tunings();
+}
+
+PidTunings DroneController::get_yaw_tunings() {
+    return yaw_pid.get_tunings();
 }
 
 PidValues DroneController::get_last_pid() {
@@ -52,3 +68,20 @@ void DroneController::set_pitch(float sp) {
 void DroneController::set_altitude(float sp) {
     altitude_setpoint = sp;
 }
+
+void DroneController::set_thrust_tunings(PidTunings tunings) {
+    thrust_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_pitch_tunings(PidTunings tunings) {
+    pitch_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_roll_tunings(PidTunings tunings) {
+    roll_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_yaw_tunings(PidTunings tunings) {
+    yaw_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+

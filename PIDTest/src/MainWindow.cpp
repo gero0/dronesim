@@ -98,7 +98,6 @@ MainWindow::MainWindow() {
     this->resize(800, 600);
 
     pid.set_tunings(0.1, 0.1, 0.000);
-    pid.set_dt(dt);
     pid.set_windup(0.0, 1.0f);
     pid.set_clamp(0.0, 1.0);
 
@@ -108,7 +107,7 @@ MainWindow::MainWindow() {
 }
 
 void MainWindow::update_sim() {
-    float pid_output = pid.update(setpoint, sys_status);
+    float pid_output = pid.update(setpoint, sys_status, dt);
 
     setpoints->append(current_time, setpoint);
     pid_inputs->append(current_time, sys_status);

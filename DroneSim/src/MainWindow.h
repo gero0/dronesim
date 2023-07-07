@@ -9,16 +9,20 @@
 #include <QtDataVisualization>
 #include <iostream>
 #include "DroneModel.h"
+#include "PIDWindow.h"
+#include "PlotWindow.h"
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
 
 public slots:
-    void update_sim_ui();
     void update_sim();
+    void open_pid_settings();
+    void open_plot_window();
 
 public:
     MainWindow();
+    ~MainWindow() override;
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -32,10 +36,11 @@ private:
     DroneModel drone;
 
     const float dt = 0.01;
+    float current_time = 0.0f;
 
-    QWidget* init_vis(QWidget* parent);
+    QWidget* init_visualization(QWidget* parent);
     QWidget* init_bars(QWidget* parent);
-    QWidget* init_data(QWidget* parent);
+    QWidget* init_menu_widgets(QWidget* parent);
 
     QLabel* position;
     QLabel* rotation;
@@ -53,6 +58,11 @@ private:
     QLabel* label_fr;
     QLabel* label_bl;
     QLabel* label_br;
+
+    PIDWindow* pid_window;
+    PlotWindow* plot_window;
+    QPushButton* open_pid_window_btn;
+    QPushButton* open_plot_window_btn;
 
     void draw_scatter();
 

@@ -22,7 +22,7 @@ public:
     const float arm_len = 0.1f;
     const float motor_max_thrust = 10.0f;//10N
     const float yaw_coeff = 0.01f;
-    const float body_mass = 2.0f;
+    const float body_mass = 1.5f;
     const float body_radius = 0.03f;
     const float motor_mass = 0.03f;
     const float g = 9.8;

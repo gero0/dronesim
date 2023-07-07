@@ -5,17 +5,22 @@
 #ifndef PLOTTING_PID_H
 #define PLOTTING_PID_H
 
+//TODO: incorporate into constructor/set_tunings?
+struct PidTunings{
+    float Kp;
+    float Ki;
+    float Kd;
+};
 
 class PID {
 public:
-    PID(float Kp, float Ki, float Kd, float dt, float min, float max)
-            : Kp(Kp), Ki(Ki), Kd(Kd), dt(dt), totalMin(min), windupMin(min), totalMax(max), windupMax(max) {}
+    PID(float Kp, float Ki, float Kd, float min, float max)
+            : Kp(Kp), Ki(Ki), Kd(Kd), totalMin(min), windupMin(min), totalMax(max), windupMax(max) {}
 
-    float update(float setpoint, float process_value);
+    float update(float setpoint, float process_value, float dt);
 
     void set_tunings(float p, float i, float d);
-
-    void set_dt(float dt);
+    PidTunings get_tunings();
 
     void set_windup(float min, float max);
 

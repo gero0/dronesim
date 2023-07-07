@@ -9,7 +9,7 @@
 #include "MotorDriver.h"
 #include "PID.h"
 
-struct PidValues{
+struct PidValues {
     float v_thrust;
     float v_pitch;
     float v_roll;
@@ -25,11 +25,27 @@ public:
     }
 
     void update(float dt);
+
     PidValues get_last_pid();
+
     PidValues get_setpoints();
+
+    PidTunings get_thrust_tunings();
+    PidTunings get_pitch_tunings();
+    PidTunings get_roll_tunings();
+    PidTunings get_yaw_tunings();
+
+    void set_thrust_tunings(PidTunings tunings);
+    void set_pitch_tunings(PidTunings tunings);
+    void set_roll_tunings(PidTunings tunings);
+    void set_yaw_tunings(PidTunings tunings);
+
     void set_altitude(float sp);
+
     void set_pitch(float sp);
+
     void set_roll(float sp);
+
     void set_yaw(float sp);
 
 private:
@@ -50,13 +66,13 @@ private:
     MotorDriver *back_left;
     MotorDriver *back_right;
 
-    PID thrust_pid{0.8f, 0.01f, 2.5f, 0.1f, 0.0f, 1.0f};
-    PID pitch_pid{0.1f, 0.1f, 0.1f, 0.1f, -1.0f, 1.0f};
-    PID roll_pid{0.1f, 0.1f, 0.1f, 0.1f, -1.0f, 1.0f};
-    PID yaw_pid{0.01f, 0.0f, 0.1f, 0.1f, -1.0f, 1.0f};
+    PID thrust_pid{4.0f, 0.5f, 1.0f, 0.0f, 1.0f};
+    PID pitch_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
+    PID roll_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
+    PID yaw_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
 
-    Rotation rotation {0.0f, 0.0f, 0.0f};
-    Rotation angular_velocity {0.0f, 0.0f, 0.0f};
+    Rotation rotation{0.0f, 0.0f, 0.0f};
+    Rotation angular_velocity{0.0f, 0.0f, 0.0f};
 };
 
 #endif //DRONESIMPROJECT_DRONECONTROLLER_H
