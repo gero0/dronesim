@@ -27,6 +27,8 @@ private:
     QHBoxLayout* layout;
 
     float x_max = 1.0;
+    float y_min = 0.0;
+    float y_max = 1.0;
 };
 
 

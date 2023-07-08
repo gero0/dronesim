@@ -31,8 +31,8 @@ private:
     QWidget *central_widget;
     QHBoxLayout *root_layout;
     Q3DScatter *vis_plot;
-    QScatter3DSeries vis_series;
-    QScatterDataArray vis_data;
+    QScatter3DSeries* vis_series;
+    QScatterDataArray* vis_data;
     DroneModel drone;
 
     const float dt = 0.01;

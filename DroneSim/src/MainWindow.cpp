@@ -16,6 +16,7 @@ std::string string_format(const std::string &format, Args ... args) {
 
 MainWindow::MainWindow() {
     this->setMinimumSize(1200, 600);
+//    this->setAttribute(Qt::WA_DeleteOnClose);
     central_widget = new QWidget(this);
 
     pid_window = new PIDWindow(&drone);
@@ -53,13 +54,15 @@ MainWindow::MainWindow() {
 }
 
 QWidget *MainWindow::init_visualization(QWidget *parent) {
-    vis_series.setItemSize(0.1);
+    vis_data = new QScatterDataArray();
+    vis_series = new QScatter3DSeries(this);
+    vis_series->setItemSize(0.1);
     vis_plot = new Q3DScatter();
     vis_plot->scene()->activeCamera()->setCameraPreset(Q3DCamera::CameraPresetIsometricRight);
     vis_plot->scene()->activeCamera()->setZoomLevel(150.0f);
 
     QWidget * m_container = QWidget::createWindowContainer(vis_plot, parent);
-    vis_plot->addSeries(&vis_series);
+    vis_plot->addSeries(vis_series);
     vis_plot->setAspectRatio(1.0);
     vis_plot->setHorizontalAspectRatio(1.0);
 
@@ -208,16 +211,16 @@ void MainWindow::draw_scatter() {
 
     Vector3 motors[4] = {front_right, front_left, back_left, back_right};
 
-    vis_data.clear();
+    vis_data->clear();
 
     for (auto motor: motors) {
-        vis_data << QVector3D(motor.x, motor.z, motor.y);
+        *vis_data << QVector3D(motor.x, motor.z, motor.y);
     }
 
-    vis_data << QVector3D(x, z, y);
-    vis_data << QVector3D(x, 0, y);
+    *vis_data << QVector3D(x, z, y);
+    *vis_data << QVector3D(x, 0, y);
 
-    vis_series.dataProxy()->resetArray(&vis_data);
+    vis_series->dataProxy()->resetArray(vis_data);
 
     rescale_axes();
 }
@@ -272,6 +275,8 @@ void MainWindow::open_plot_window() {
 }
 
 MainWindow::~MainWindow() {
+    pid_window->close();
+    plot_window->close();
     delete pid_window;
     delete plot_window;
 }

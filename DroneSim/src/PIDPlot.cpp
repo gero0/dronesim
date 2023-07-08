@@ -33,6 +33,8 @@ void PIDPlot::set_x_range(float min, float max){
 
 void PIDPlot::set_y_range(float min, float max){
     chart->axes()[1]->setRange(min, max);
+    y_min = min;
+    y_max = max;
 }
 
 void PIDPlot::clear(){
@@ -49,5 +51,19 @@ void PIDPlot::append(float time, float setpoint, float value){
         chart->axes()[0]->setMin(x_max);
         x_max += 1.0f;
         chart->axes()[0]->setMax(x_max);
+    }
+
+    if (value > y_max){
+        float diff = (y_max - y_min);
+        chart->axes()[1]->setMin(y_max);
+        y_min = y_max;
+        y_max += diff;
+        chart->axes()[1]->setMax(y_max);
+    }else if (value < y_min){
+        float diff = (y_max - y_min);
+        chart->axes()[1]->setMax(y_min);
+        y_max = y_min;
+        y_min -= diff;
+        chart->axes()[1]->setMin(y_min);
     }
 }

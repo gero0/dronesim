@@ -23,7 +23,7 @@ PlotWindow::PlotWindow(QWidget *parent) {
     yaw_plot->set_x_range(0.0f, 3.0f);
     yaw_plot->set_y_range(-3.14f, 3.14);
 
-    tabs->addTab(thrust_plot, "Thrust");
+    tabs->addTab(thrust_plot, "Altitude");
     tabs->addTab(pitch_plot, "Pitch");
     tabs->addTab(roll_plot, "Roll");
     tabs->addTab(yaw_plot, "Yaw");
