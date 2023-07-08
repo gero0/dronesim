@@ -17,6 +17,10 @@ void DroneController::update(float dt) {
     rotation.pitch += angular_velocity.pitch * dt;
     rotation.roll += angular_velocity.roll * dt;
     rotation.yaw += angular_velocity.yaw * dt;
+    //TODO: fix this and remove this woraround
+    float yaw_og = rotation.yaw;
+    rotation.normalize();
+    rotation.yaw = yaw_og;
 
     v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
     v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
@@ -54,15 +58,16 @@ PidValues DroneController::get_setpoints() {
 }
 
 void DroneController::set_yaw(float sp) {
+//    yaw_setpoint = normalize_angle(sp);
     yaw_setpoint = sp;
 }
 
 void DroneController::set_roll(float sp) {
-    roll_setpoint = sp;
+    roll_setpoint = normalize_angle(sp);
 }
 
 void DroneController::set_pitch(float sp) {
-    pitch_setpoint = sp;
+    pitch_setpoint = normalize_angle(sp);
 }
 
 void DroneController::set_altitude(float sp) {

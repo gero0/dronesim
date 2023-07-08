@@ -27,21 +27,35 @@ void DroneModel::update(float dt) {
     rotation.pitch += angular_velocity.pitch * dt;
     rotation.yaw += angular_velocity.yaw * dt;
 
+    rotation.normalize();
+
     float thrust = thrust_fl + thrust_fr + thrust_br + thrust_bl;
     float mass = (body_mass + 4.0f * motor_mass);
     Vector3 acceleration_local{
-//            sinf(rotation.yaw) * -sinf(rotation.roll) * thrust / mass,
-//            sinf(rotation.yaw) * -sinf(rotation.pitch) * thrust / mass,
             -sinf(rotation.roll) * thrust / mass,
             -sinf(rotation.pitch) * thrust / mass,
             (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
     };
 
     Vector3 acceleration{
-            (sinf(rotation.yaw)*sinf(rotation.pitch)*cosf(rotation.roll) - cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
-            -(cosf(rotation.yaw)*sinf(rotation.pitch)*cosf(rotation.roll) + sinf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
+            (sinf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) -
+             cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
+            -(cosf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) +
+              sinf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
             (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
     };
+
+    //air resistance
+    acceleration_local = {acceleration_local.x - (1.0f / mass) * air_resistance_coeff * velocity.x,
+                          acceleration_local.y - (1.0f / mass) * air_resistance_coeff * velocity.y,
+                          acceleration_local.z - (1.0f / mass) * air_resistance_coeff * velocity.z,
+    };
+
+    acceleration = {acceleration.x - (1.0f / mass) * air_resistance_coeff * velocity.x,
+                    acceleration.y - (1.0f / mass) * air_resistance_coeff * velocity.y,
+                    acceleration.z - (1.0f / mass) * air_resistance_coeff * velocity.z,
+    };
+
 
     velocity.x += acceleration.x * dt;
     velocity.y += acceleration.y * dt;

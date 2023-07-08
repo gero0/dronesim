@@ -26,6 +26,7 @@ public:
     const float body_radius = 0.03f;
     const float motor_mass = 0.03f;
     const float g = 9.8;
+    const float air_resistance_coeff = 2.0;
 
     const float rp_inertia_moment =
             ( 2.0f * body_mass * std::pow(body_radius, 2.0f) / 5.0f )

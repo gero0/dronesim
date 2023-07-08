@@ -56,28 +56,28 @@ MainWindow::MainWindow() {
 QWidget *MainWindow::init_visualization(QWidget *parent) {
     vis_data = new QScatterDataArray();
     vis_series = new QScatter3DSeries(this);
-    vis_series->setItemSize(0.1);
+    vis_series->setItemSize(0.05);
     vis_plot = new Q3DScatter();
     vis_plot->scene()->activeCamera()->setCameraPreset(Q3DCamera::CameraPresetIsometricRight);
     vis_plot->scene()->activeCamera()->setZoomLevel(150.0f);
 
-    QWidget * m_container = QWidget::createWindowContainer(vis_plot, parent);
+    QWidget *m_container = QWidget::createWindowContainer(vis_plot, parent);
     vis_plot->addSeries(vis_series);
     vis_plot->setAspectRatio(1.0);
     vis_plot->setHorizontalAspectRatio(1.0);
 
     auto x_axis = new QValue3DAxis(m_container);
-    x_axis->setMin(-10.0);
-    x_axis->setMax(10.0);
+    x_axis->setMin(-5.0);
+    x_axis->setMax(5.0);
 
     auto y_axis = new QValue3DAxis(m_container);
     y_axis->setMin(0.0);
-    y_axis->setMax(20.0);
+    y_axis->setMax(10.0);
 
     auto z_axis = new QValue3DAxis(m_container);
-    z_axis->setMin(-10.0);
-    z_axis->setMax(10.0);
-
+    z_axis->setMin(-5.0);
+    z_axis->setMax(5.0);
+    
     vis_plot->setAxisX(x_axis);
     vis_plot->setAxisY(y_axis);
     vis_plot->setAxisZ(z_axis);
@@ -162,9 +162,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         drone.controller.set_yaw(setpoints.v_yaw + 0.05f);
     } else if (event->key() == Qt::Key_E) {
         drone.controller.set_yaw(setpoints.v_yaw - 0.05f);
-    } else if (event->key() == Qt::Key_Shift) {
+    } else if (event->key() == Qt::Key_Z) {
         drone.controller.set_altitude(setpoints.v_thrust + 0.5f);
-    } else if (event->key() == Qt::Key_Control) {
+    } else if (event->key() == Qt::Key_X) {
         drone.controller.set_altitude(setpoints.v_thrust - 0.5f);
     }
 }
@@ -197,12 +197,12 @@ void MainWindow::update_sim() {
 void MainWindow::draw_scatter() {
     auto [x, y, z] = drone.position;
     auto [pitch, yaw, roll] = drone.rotation;
-    const float r = 2.0f;
+    const float r = 0.2f;
 
-    Vector3 fr{cosf(yaw) - sinf(yaw), sinf(yaw) + cosf(yaw), r * sinf(pitch) + r * sinf(roll)};
-    Vector3 fl{-cosf(yaw) - sinf(yaw), -sinf(yaw) + cosf(yaw), r * sinf(pitch) - r * sinf(roll)};
-    Vector3 br{cosf(yaw) + sinf(yaw), sinf(yaw) - cosf(yaw), -r * sinf(pitch) + r * sinf(roll)};
-    Vector3 bl{-cosf(yaw) + sinf(yaw), -sinf(yaw) - cosf(yaw), -r * sinf(pitch) - r * sinf(roll)};
+    Vector3 fr{r * (cosf(yaw) - sinf(yaw)),  r*(sinf(yaw) + cosf(yaw)), r * sinf(pitch) + r * sinf(roll) };
+    Vector3 fl{r * (-cosf(yaw) - sinf(yaw)), r*(-sinf(yaw) + cosf(yaw)), r * sinf(pitch) - r * sinf(roll)};
+    Vector3 br{r * (cosf(yaw) + sinf(yaw)), r*(sinf(yaw) - cosf(yaw)), -r * sinf(pitch) + r * sinf(roll)};
+    Vector3 bl{r * (-cosf(yaw) + sinf(yaw)), r*(-sinf(yaw) - cosf(yaw)), -r * sinf(pitch) - r * sinf(roll)};
 
     Vector3 front_right{x + fr.x, y + fr.y, z + fr.z};
     Vector3 front_left{x + fl.x, y + fl.y, z + fl.z};
