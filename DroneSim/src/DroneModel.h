@@ -36,6 +36,12 @@ public:
             ( 2.0f * body_mass * std::pow(body_radius, 2.0f) / 5.0f )
             + 4.0f * motor_mass * std::pow(arm_len, 2.0f);
 
+    const Rotation inertia_moment = {
+            rp_inertia_moment,
+            yaw_inertia_moment,
+            rp_inertia_moment,
+    };
+
     void update(float dt);
 
     MotorDriverMock fl_driver;
