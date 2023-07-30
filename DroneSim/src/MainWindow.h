@@ -33,6 +33,8 @@ private:
     Q3DScatter *vis_plot;
     QScatter3DSeries* vis_series;
     QScatterDataArray* vis_data;
+    QScatter3DSeries* ins_series;
+    QScatterDataArray* ins_data;
     DroneModel drone;
 
     const float dt = 0.01;
@@ -46,6 +48,8 @@ private:
     QLabel* rotation;
     QLabel* velocity;
     QLabel* angular;
+    QLabel* acceleration;
+    QLabel* acc_local;
     QLabel* pid_out;
     QLabel* pid_setpoints;
 

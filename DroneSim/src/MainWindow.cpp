@@ -56,13 +56,18 @@ MainWindow::MainWindow() {
 QWidget *MainWindow::init_visualization(QWidget *parent) {
     vis_data = new QScatterDataArray();
     vis_series = new QScatter3DSeries(this);
+    ins_data = new QScatterDataArray();
+    ins_series = new QScatter3DSeries(this);
+    ins_series->setItemSize(0.05);
     vis_series->setItemSize(0.05);
+
     vis_plot = new Q3DScatter();
     vis_plot->scene()->activeCamera()->setCameraPreset(Q3DCamera::CameraPresetIsometricRight);
     vis_plot->scene()->activeCamera()->setZoomLevel(150.0f);
 
     QWidget *m_container = QWidget::createWindowContainer(vis_plot, parent);
     vis_plot->addSeries(vis_series);
+    vis_plot->addSeries(ins_series);
     vis_plot->setAspectRatio(1.0);
     vis_plot->setHorizontalAspectRatio(1.0);
 
@@ -77,7 +82,7 @@ QWidget *MainWindow::init_visualization(QWidget *parent) {
     auto z_axis = new QValue3DAxis(m_container);
     z_axis->setMin(-5.0);
     z_axis->setMax(5.0);
-    
+
     vis_plot->setAxisX(x_axis);
     vis_plot->setAxisY(y_axis);
     vis_plot->setAxisZ(z_axis);
@@ -127,6 +132,8 @@ QWidget *MainWindow::init_menu_widgets(QWidget *parent) {
     rotation = new QLabel("", data_widget);
     velocity = new QLabel("", data_widget);
     angular = new QLabel("", data_widget);
+    acceleration = new QLabel("", data_widget);
+    acc_local = new QLabel("", data_widget);
     pid_out = new QLabel("", data_widget);
     pid_setpoints = new QLabel("", data_widget);
 
@@ -137,6 +144,8 @@ QWidget *MainWindow::init_menu_widgets(QWidget *parent) {
     layout->addWidget(rotation);
     layout->addWidget(velocity);
     layout->addWidget(angular);
+    layout->addWidget(acceleration);
+    layout->addWidget(acc_local);
     layout->addWidget(pid_out);
     layout->addWidget(pid_setpoints);
     layout->addWidget(open_pid_window_btn);
@@ -166,6 +175,11 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         drone.controller.set_altitude(setpoints.v_thrust + 0.5f);
     } else if (event->key() == Qt::Key_X) {
         drone.controller.set_altitude(setpoints.v_thrust - 0.5f);
+    } else if (event->key() == Qt::Key_Return) {
+        drone.controller.level();
+        drone.controller.RTO();
+    } else if (event->key() == Qt::Key_H) {
+        drone.controller.hover();
     }
 }
 
@@ -196,13 +210,13 @@ void MainWindow::update_sim() {
 
 void MainWindow::draw_scatter() {
     auto [x, y, z] = drone.position;
-    auto [pitch, yaw, roll] = drone.rotation;
+    auto [pitch, yaw, roll] = drone.rotation.get();
     const float r = 0.2f;
 
-    Vector3 fr{r * (cosf(yaw) - sinf(yaw)),  r*(sinf(yaw) + cosf(yaw)), r * sinf(pitch) + r * sinf(roll) };
-    Vector3 fl{r * (-cosf(yaw) - sinf(yaw)), r*(-sinf(yaw) + cosf(yaw)), r * sinf(pitch) - r * sinf(roll)};
-    Vector3 br{r * (cosf(yaw) + sinf(yaw)), r*(sinf(yaw) - cosf(yaw)), -r * sinf(pitch) + r * sinf(roll)};
-    Vector3 bl{r * (-cosf(yaw) + sinf(yaw)), r*(-sinf(yaw) - cosf(yaw)), -r * sinf(pitch) - r * sinf(roll)};
+    Vector3 fr{r * (cosf(yaw) - sinf(yaw)), r * (sinf(yaw) + cosf(yaw)), r * sinf(pitch) + r * sinf(roll)};
+    Vector3 fl{r * (-cosf(yaw) - sinf(yaw)), r * (-sinf(yaw) + cosf(yaw)), r * sinf(pitch) - r * sinf(roll)};
+    Vector3 br{r * (cosf(yaw) + sinf(yaw)), r * (sinf(yaw) - cosf(yaw)), -r * sinf(pitch) + r * sinf(roll)};
+    Vector3 bl{r * (-cosf(yaw) + sinf(yaw)), r * (-sinf(yaw) - cosf(yaw)), -r * sinf(pitch) - r * sinf(roll)};
 
     Vector3 front_right{x + fr.x, y + fr.y, z + fr.z};
     Vector3 front_left{x + fl.x, y + fl.y, z + fl.z};
@@ -212,15 +226,19 @@ void MainWindow::draw_scatter() {
     Vector3 motors[4] = {front_right, front_left, back_left, back_right};
 
     vis_data->clear();
+    ins_data->clear();
 
     for (auto motor: motors) {
         *vis_data << QVector3D(motor.x, motor.z, motor.y);
     }
 
-    *vis_data << QVector3D(x, z, y);
+//    *vis_data << QVector3D(x, z, y);
     *vis_data << QVector3D(x, 0, y);
+    auto [insx, insy, insz] = drone.controller.position_global;
+    *ins_data << QVector3D(insx, insz, insy);
 
     vis_series->dataProxy()->resetArray(vis_data);
+    ins_series->dataProxy()->resetArray(ins_data);
 
     rescale_axes();
 }
@@ -242,9 +260,11 @@ void MainWindow::rescale_axes() {
 
 void MainWindow::draw_text() {
     auto [x, y, z] = drone.position;
-    auto [pitch, yaw, roll] = drone.rotation;
+    auto [pitch, yaw, roll] = drone.rotation.get();
     auto [vx, vy, vz] = drone.velocity;
-    auto [vp, vyaw, vr] = drone.angular_velocity;
+    auto [vp, vyaw, vr] = drone.angular_velocity.get();
+    auto [ax, ay, az] = drone.acceleration;
+    auto [axl, ayl, azl] = drone.acceleration_local;
 
     position->setText(QString::fromStdString(string_format("Position: X: %.2f; Y: %.2f; Z: %.2f; (m)", x, y, z)));
     rotation->setText(
@@ -252,6 +272,10 @@ void MainWindow::draw_text() {
     velocity->setText(QString::fromStdString(string_format("Velocity: X: %.2f; Y: %.2f; Z: %.2f; (m/s)", vx, vy, vz)));
     angular->setText(
             QString::fromStdString(string_format("Angular V.: P: %.2f; R: %.2f; Y: %.2f; (rad/s)", vp, vr, vyaw)));
+    acceleration->setText(
+            QString::fromStdString(string_format("Acceleration: X: %.2f; Y: %.2f; Z: %.2f; (m/s)", ax, ay, az)));
+    acc_local->setText(
+            QString::fromStdString(string_format("Acc. (Local RF): X: %.2f; Y: %.2f; Z: %.2f; (m/s)", axl, ayl, azl)));
 
     PidValues pid = drone.controller.get_last_pid();
     PidValues setpoints = drone.controller.get_setpoints();

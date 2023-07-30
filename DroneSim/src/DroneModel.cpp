@@ -2,7 +2,10 @@
 // Created by gero on 6/28/23.
 //
 
+#include <QDebug>
 #include "DroneModel.h"
+
+
 
 void DroneModel::update(float dt) {
     //Assume linear relation of motor power and thrust
@@ -25,7 +28,7 @@ void DroneModel::update(float dt) {
     float thrust = thrust_fl + thrust_fr + thrust_br + thrust_bl;
     float mass = (body_mass + 4.0f * motor_mass);
 
-    Vector3 acceleration{
+    acceleration = {
             (sinf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) -
              cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
             -(cosf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) +
@@ -33,7 +36,6 @@ void DroneModel::update(float dt) {
             (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
     };
 
-    //air resistance
     acceleration = {acceleration.x - (1.0f / mass) * air_resistance_coeff * velocity.x,
                     acceleration.y - (1.0f / mass) * air_resistance_coeff * velocity.y,
                     acceleration.z - (1.0f / mass) * air_resistance_coeff * velocity.z,
@@ -45,9 +47,13 @@ void DroneModel::update(float dt) {
     if (position.z <= 0.0f) {
         position.z = 0.0f;
         velocity.z = 0.0f;
+        velocity_local.z = 0.0f;
     }
 
-    sensor_mock.acceleration = acceleration;
+    acceleration_local = rotate_vector(acceleration, {0,-rotation.yaw,0});
+    velocity_local = rotate_vector(velocity, {0,-rotation.yaw,0});
+
+    sensor_mock.acceleration = acceleration_local;
     sensor_mock.angular_acceleration = angular_acceleration;
     sensor_mock.altitude = position.z;
 
