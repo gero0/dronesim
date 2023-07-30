@@ -19,6 +19,20 @@ float normalize_angle( float angle )
     return angle;
 }
 
+Vector3 rotate_vector(const Vector3 &v, const Rotation &r) {
+    //https://en.wikipedia.org/wiki/Rotation_matrix
+    float xr = v.x * cosf(r.yaw) * cosf(r.pitch)
+               + v.y * (cosf(r.yaw) * sinf(r.pitch) * sinf(r.roll) - sinf(r.yaw)*cosf(r.roll))
+               + v.z * (cosf(r.yaw) * sinf(r.pitch) * cosf(r.roll) + sinf(r.yaw)*sinf(r.roll));
+
+    float yr = v.x * sinf(r.yaw) * cosf(r.pitch)
+               + v.y * (sinf(r.yaw) * sinf(r.pitch) * sinf(r.roll) + cosf(r.yaw)*cosf(r.roll))
+               + v.z * (sinf(r.yaw) * sinf(r.pitch) * cosf(r.roll) - cosf(r.yaw)*sinf(r.roll));
+
+    float zr = v.x * -sinf(r.pitch) + v.y * cosf(r.pitch) * sinf(r.roll) + v.z * cosf(r.pitch) * cosf(r.roll);
+    return {xr, yr, zr};
+}
+
 Vector3 rotate_reference_frame(Vector3 v, float yaw_angle) {
     return {
             v.x * cosf(yaw_angle) - v.y * sinf(yaw_angle),

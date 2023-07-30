@@ -48,7 +48,7 @@ struct Vector3 {
 
 };
 
-Vector3 rotate_reference_frame(Vector3 v, float yaw_angle);
+//Vector3 rotate_reference_frame(Vector3 v, float yaw_angle);
 
 struct Rotation {
     float &pitch = inner.x;
@@ -93,5 +93,7 @@ struct Rotation {
 private:
     Vector3 inner;
 };
+
+Vector3 rotate_vector(const Vector3& v, const Rotation& r);
 
 #endif //PLOTTING_ALGEBRA_H
