@@ -7,117 +7,91 @@
 
 #include <cmath>
 
-float normalize_angle( float angle );
+float normalize_angle(float angle);
 
 struct Vector3 {
     float x;
     float y;
     float z;
 
-    Vector3 operator*(float a) const{
-        return {
-            x * a,
-            y * a,
-            z * a,
-        };
-    }
+    Vector3 &operator+=(const Vector3 &a);
 
-    Vector3 operator+(const Vector3& b) const{
-        return {
-                x + b.x,
-                y + b.y,
-                z + b.z,
-        };
-    }
+    Vector3 operator+(const Vector3 &a) const;
 
-    Vector3 operator+(float a) const{
-        return {
-                x + a,
-                y + a,
-                z + a,
-        };
-    }
+    Vector3 &operator-=(const Vector3 &a);
 
-    Vector3 & operator+=(const Vector3 & b){
-        this->x += b.x;
-        this->y += b.y;
-        this->z += b.z;
-        return *this;
-    }
+    Vector3 operator-(const Vector3 &a) const;
 
-    Vector3 & operator+=(float a){
-        this->x += a;
-        this->y += a;
-        this->z += a;
-        return *this;
-    }
+    Vector3 &operator*=(const Vector3 &a);
+
+    Vector3 operator*(const Vector3 &a) const;
+
+    Vector3 &operator/=(const Vector3 &a);
+
+    Vector3 operator/(const Vector3 &a) const;
+
+    Vector3 &operator+=(float a);
+
+    Vector3 &operator-=(float a);
+
+    Vector3 &operator*=(float a);
+
+    Vector3 &operator/=(float a);
+
+    Vector3 operator*(float a) const;
+
+    Vector3 operator/(float a) const;
+
+    Vector3 operator+(float a) const;
+
+    Vector3 operator-(float a) const;
 
 };
 
+Vector3 rotate_reference_frame(Vector3 v, float yaw_angle);
+
 struct Rotation {
-    float pitch;
-    float yaw;
-    float roll;
+    float &pitch = inner.x;
+    float &yaw = inner.z;
+    float &roll = inner.y;
 
-    void normalize(){
-        pitch = normalize_angle(pitch);
-        yaw = normalize_angle(yaw);
-        roll = normalize_angle(roll);
-    }
+    Rotation(float pitch, float yaw, float roll) : inner(pitch, roll, yaw) {}
 
-    Rotation operator*(float a) const{
-        return {
-                pitch * a,
-                yaw * a,
-                roll * a,
-        };
-    }
-
-    Rotation operator+(const Rotation& b) const{
-        return {
-                pitch + b.pitch,
-                yaw + b.yaw,
-                roll + b.roll,
-        };
-    }
-
-    Rotation operator+(float a) const{
-        return {
-                pitch + a,
-                yaw + a,
-                roll + a,
-        };
-    }
-
-    Rotation operator/(const Rotation& b) const{
-        return {
-                pitch / b.pitch,
-                yaw / b.yaw,
-                roll / b.roll,
-        };
-    }
-
-    Rotation operator/(float a) const{
-        return {
-                pitch / a,
-                yaw / a,
-                roll / a,
-        };
-    }
-
-    Rotation& operator+=(const Rotation& b){
-        this->pitch += b.pitch;
-        this->yaw += b.yaw;
-        this->roll += b.roll;
+    Rotation& operator=(const Rotation &a){
+        inner = a.inner;
         return *this;
     }
 
-    Rotation& operator+=(float a){
-        this->pitch += a;
-        this->yaw += a;
-        this->roll += a;
-        return *this;
-    }
+    Vector3 get();
+
+    Rotation &operator+=(const Rotation &a);
+
+    Rotation operator+(const Rotation &a);
+
+    Rotation &operator-=(const Rotation &a);
+
+    Rotation operator-(const Rotation &a);
+
+    Rotation &operator*=(const Rotation &a);
+
+    Rotation operator*(const Rotation &a);
+
+    Rotation &operator/=(const Rotation &a);
+
+    Rotation operator/(const Rotation &a);
+
+    Rotation operator*(float a) const;
+
+    Rotation operator/(float a) const;
+
+    Rotation operator+(float a) const;
+
+    Rotation operator-(float a) const;
+
+    void normalize();
+
+private:
+    Vector3 inner;
 };
 
 #endif //PLOTTING_ALGEBRA_H
