@@ -210,7 +210,7 @@ void MainWindow::update_sim() {
 
 void MainWindow::draw_scatter() {
     auto [x, y, z] = drone.position;
-    auto [pitch, yaw, roll] = drone.rotation.get();
+    auto [pitch, yaw, roll] = drone.rotation;
     const float r = 0.2f;
 
     Vector3 fr{r * (cosf(yaw) - sinf(yaw)), r * (sinf(yaw) + cosf(yaw)), r * sinf(pitch) + r * sinf(roll)};
@@ -260,9 +260,9 @@ void MainWindow::rescale_axes() {
 
 void MainWindow::draw_text() {
     auto [x, y, z] = drone.position;
-    auto [pitch, yaw, roll] = drone.rotation.get();
+    auto [pitch, yaw, roll] = drone.rotation;
     auto [vx, vy, vz] = drone.velocity;
-    auto [vp, vyaw, vr] = drone.angular_velocity.get();
+    auto [vp, vyaw, vr] = drone.angular_velocity;
     auto [ax, ay, az] = drone.acceleration;
     auto [axl, ayl, azl] = drone.acceleration_local;
 

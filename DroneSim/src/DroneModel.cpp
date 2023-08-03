@@ -50,8 +50,8 @@ void DroneModel::update(float dt) {
         velocity_local.z = 0.0f;
     }
 
-    acceleration_local = rotate_vector(acceleration, {0,-rotation.yaw,0});
-    velocity_local = rotate_vector(velocity, {0,-rotation.yaw,0});
+    acceleration_local = rotate_vector(acceleration, rotation * -1.0f);
+    velocity_local = rotate_vector(velocity, rotation * -1.0f);
 
     sensor_mock.acceleration = acceleration_local;
     sensor_mock.angular_acceleration = angular_acceleration;

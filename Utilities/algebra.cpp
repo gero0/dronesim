@@ -2,6 +2,7 @@
 // Created by gero on 7/8/23.
 //
 
+#include <iostream>
 #include "algebra.h"
 
 float normalize_angle( float angle )
@@ -21,15 +22,18 @@ float normalize_angle( float angle )
 
 Vector3 rotate_vector(const Vector3 &v, const Rotation &r) {
     //https://en.wikipedia.org/wiki/Rotation_matrix
-    float xr = v.x * cosf(r.yaw) * cosf(r.pitch)
-               + v.y * (cosf(r.yaw) * sinf(r.pitch) * sinf(r.roll) - sinf(r.yaw)*cosf(r.roll))
-               + v.z * (cosf(r.yaw) * sinf(r.pitch) * cosf(r.roll) + sinf(r.yaw)*sinf(r.roll));
-
-    float yr = v.x * sinf(r.yaw) * cosf(r.pitch)
-               + v.y * (sinf(r.yaw) * sinf(r.pitch) * sinf(r.roll) + cosf(r.yaw)*cosf(r.roll))
-               + v.z * (sinf(r.yaw) * sinf(r.pitch) * cosf(r.roll) - cosf(r.yaw)*sinf(r.roll));
-
-    float zr = v.x * -sinf(r.pitch) + v.y * cosf(r.pitch) * sinf(r.roll) + v.z * cosf(r.pitch) * cosf(r.roll);
+//    float xr = v.x * cosf(r.yaw) * cosf(r.pitch)
+//               + v.y * (cosf(r.yaw) * sinf(r.pitch) * sinf(r.roll) - sinf(r.yaw)*cosf(r.roll))
+//               + v.z * (cosf(r.yaw) * sinf(r.pitch) * cosf(r.roll) + sinf(r.yaw)*sinf(r.roll));
+//
+//    float yr = v.x * sinf(r.yaw) * cosf(r.pitch)
+//               + v.y * (sinf(r.yaw) * sinf(r.pitch) * sinf(r.roll) + cosf(r.yaw)*cosf(r.roll))
+//               + v.z * (sinf(r.yaw) * sinf(r.pitch) * cosf(r.roll) - cosf(r.yaw)*sinf(r.roll));
+//
+//    float zr = v.x * -sinf(r.pitch) + v.y * cosf(r.pitch) * sinf(r.roll) + v.z * cosf(r.pitch) * cosf(r.roll);
+    float xr = v.x * cosf(r.yaw) - v.y * sinf(r.yaw);
+    float yr = v.x * sinf(r.yaw) + v.y * cosf(r.yaw);
+    float zr = v.z;
     return {xr, yr, zr};
 }
 
@@ -130,71 +134,95 @@ Vector3 Vector3::operator/(float a) const {
 }
 
 Rotation &Rotation::operator+=(const Rotation &a) {
-    this->inner += a.inner;
+    this->pitch += a.pitch;
+    this->yaw += a.yaw;
+    this->roll += a.roll;
     return *this;
 }
 
-Rotation Rotation::operator+(const Rotation &a) {
+Rotation Rotation::operator+(const Rotation &a) const {
     return Rotation(*this) += a;
 }
 
 Rotation &Rotation::operator-=(const Rotation &a) {
-    this->inner -= a.inner;
+    this->pitch -= a.pitch;
+    this->yaw -= a.yaw;
+    this->roll -= a.roll;
     return *this;
 }
 
-Rotation Rotation::operator-(const Rotation &a) {
+Rotation Rotation::operator-(const Rotation &a) const {
     return Rotation(*this) -= a;
 }
 
-Rotation &Rotation::operator*=(const Rotation &a) {
-    this->inner *= a.inner;
+Rotation &Rotation::operator*=(const Rotation&a) {
+    this->pitch *= a.pitch;
+    this->yaw *= a.yaw;
+    this->roll *= a.roll;
     return *this;
 }
 
-Rotation Rotation::operator*(const Rotation &a) {
+Rotation Rotation::operator*(const Rotation &a) const {
     return Rotation(*this) *= a;
 }
 
 Rotation &Rotation::operator/=(const Rotation &a) {
-    this->inner /= a.inner;
+    this->pitch /= a.pitch;
+    this->yaw /= a.yaw;
+    this->roll /= a.roll;
     return *this;
 }
 
-Rotation Rotation::operator/(const Rotation &a) {
+Rotation Rotation::operator/(const Rotation &a) const{
     return Rotation(*this) /= a;
 }
 
-Rotation Rotation::operator*(float a) const {
-    auto r = Rotation(*this);
-    r.inner *= a;
-    return r;
+Rotation& Rotation::operator+=(float a){
+    this->pitch += a;
+    this->yaw += a;
+    this->roll += a;
+    return *this;
 }
 
-Rotation Rotation::operator/(float a) const {
-    auto r = Rotation(*this);
-    r.inner /= a;
-    return r;
+Rotation& Rotation::operator-=(float a){
+    this->pitch -= a;
+    this->yaw -= a;
+    this->roll -= a;
+    return *this;
+}
+
+Rotation& Rotation::operator*=(float a){
+    this->pitch *= a;
+    this->yaw *= a;
+    this->roll *= a;
+    return *this;
+}
+
+Rotation& Rotation::operator/=(float a){
+    this->pitch /= a;
+    this->yaw /= a;
+    this->roll /= a;
+    return *this;
 }
 
 Rotation Rotation::operator+(float a) const {
-    auto r = Rotation(*this);
-    r.inner += a;
-    return r;
+    return Rotation(*this) += a;
 }
 
 Rotation Rotation::operator-(float a) const {
-    auto r = Rotation(*this);
-    r.inner -= a;
-    return r;
+    return Rotation(*this) -= a;
+}
+
+Rotation Rotation::operator*(float a) const {
+    return Rotation(*this) *= a;
+}
+
+Rotation Rotation::operator/(float a) const {
+    return Rotation(*this) /= a;
 }
 
 void Rotation::normalize() {
     pitch = normalize_angle(pitch);
     yaw = normalize_angle(yaw);
     roll = normalize_angle(roll);
-}
-
-Vector3 Rotation::get() {
-    return {pitch, yaw, roll};
 }

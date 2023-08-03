@@ -51,34 +51,30 @@ struct Vector3 {
 //Vector3 rotate_reference_frame(Vector3 v, float yaw_angle);
 
 struct Rotation {
-    float &pitch = inner.x;
-    float &yaw = inner.z;
-    float &roll = inner.y;
-
-    Rotation(float pitch, float yaw, float roll) : inner(pitch, roll, yaw) {}
-
-    Rotation& operator=(const Rotation &a){
-        inner = a.inner;
-        return *this;
-    }
-
-    Vector3 get();
+    float pitch;
+    float yaw;
+    float roll;
 
     Rotation &operator+=(const Rotation &a);
 
-    Rotation operator+(const Rotation &a);
+    Rotation operator+(const Rotation &a) const;
 
     Rotation &operator-=(const Rotation &a);
 
-    Rotation operator-(const Rotation &a);
+    Rotation operator-(const Rotation &a) const;
 
     Rotation &operator*=(const Rotation &a);
 
-    Rotation operator*(const Rotation &a);
+    Rotation operator*(const Rotation &a) const;
 
     Rotation &operator/=(const Rotation &a);
 
-    Rotation operator/(const Rotation &a);
+    Rotation operator/(const Rotation &a) const;
+
+    Rotation &operator+=(float a);
+    Rotation &operator-=(float a);
+    Rotation &operator*=(float a);
+    Rotation &operator/=(float a);
 
     Rotation operator*(float a) const;
 
@@ -90,8 +86,6 @@ struct Rotation {
 
     void normalize();
 
-private:
-    Vector3 inner;
 };
 
 Vector3 rotate_vector(const Vector3& v, const Rotation& r);
