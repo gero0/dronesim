@@ -43,8 +43,8 @@ void DroneController::control_update(float dt) {
         Vector3 sp_local = rotate_vector(hover_setpoint, rotation * -1.0f);
         auto px = position_x_pid.update(sp_local.x, position_local.x, dt);
         auto py = position_y_pid.update(sp_local.y, position_local.y, dt);
-        v_pitch = pitch_pid.update(-py * max_angle, rotation.pitch, dt);
-        v_roll = roll_pid.update(-px * max_angle, rotation.roll, dt);
+        v_pitch = pitch_pid.update(px * max_angle, rotation.pitch, dt);
+        v_roll = roll_pid.update(py * max_angle, rotation.roll, dt);
     }else if (controlState == ControlState::Direct){
         v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
         v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);

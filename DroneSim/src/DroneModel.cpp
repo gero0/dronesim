@@ -29,10 +29,10 @@ void DroneModel::update(float dt) {
     float mass = (body_mass + 4.0f * motor_mass);
 
     acceleration = {
-            (sinf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) -
-             cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
-            -(cosf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) +
+            (cosf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) +
               sinf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
+            -(sinf(rotation.yaw) * sinf(rotation.pitch) * cosf(rotation.roll) -
+             cosf(rotation.yaw) * sinf(rotation.roll)) * thrust / mass,
             (cosf(rotation.roll) * cosf(rotation.pitch) * thrust / mass) - g,
     };
 

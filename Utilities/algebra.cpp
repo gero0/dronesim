@@ -31,8 +31,8 @@ Vector3 rotate_vector(const Vector3 &v, const Rotation &r) {
 //               + v.z * (sinf(r.yaw) * sinf(r.pitch) * cosf(r.roll) - cosf(r.yaw)*sinf(r.roll));
 //
 //    float zr = v.x * -sinf(r.pitch) + v.y * cosf(r.pitch) * sinf(r.roll) + v.z * cosf(r.pitch) * cosf(r.roll);
-    float xr = v.x * cosf(r.yaw) - v.y * sinf(r.yaw);
-    float yr = v.x * sinf(r.yaw) + v.y * cosf(r.yaw);
+    float xr = v.x * cosf(r.yaw) + v.y * sinf(r.yaw);
+    float yr = v.x * -sinf(r.yaw) + v.y * cosf(r.yaw);
     float zr = v.z;
     return {xr, yr, zr};
 }

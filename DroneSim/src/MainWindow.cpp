@@ -160,13 +160,13 @@ QWidget *MainWindow::init_menu_widgets(QWidget *parent) {
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     auto setpoints = drone.controller.get_setpoints();
     if (event->key() == Qt::Key_W) {
-        drone.controller.set_pitch(setpoints.v_pitch - 0.05f);
-    } else if (event->key() == Qt::Key_S) {
         drone.controller.set_pitch(setpoints.v_pitch + 0.05f);
+    } else if (event->key() == Qt::Key_S) {
+        drone.controller.set_pitch(setpoints.v_pitch - 0.05f);
     } else if (event->key() == Qt::Key_D) {
-        drone.controller.set_roll(setpoints.v_roll - 0.05f);
-    } else if (event->key() == Qt::Key_A) {
         drone.controller.set_roll(setpoints.v_roll + 0.05f);
+    } else if (event->key() == Qt::Key_A) {
+        drone.controller.set_roll(setpoints.v_roll - 0.05f);
     } else if (event->key() == Qt::Key_Q) {
         drone.controller.set_yaw(setpoints.v_yaw + 0.05f);
     } else if (event->key() == Qt::Key_E) {
@@ -213,10 +213,10 @@ void MainWindow::draw_scatter() {
     auto [pitch, yaw, roll] = drone.rotation;
     const float r = 0.2f;
 
-    Vector3 fr{r * (cosf(yaw) - sinf(yaw)), r * (sinf(yaw) + cosf(yaw)), r * sinf(pitch) + r * sinf(roll)};
-    Vector3 fl{r * (-cosf(yaw) - sinf(yaw)), r * (-sinf(yaw) + cosf(yaw)), r * sinf(pitch) - r * sinf(roll)};
-    Vector3 br{r * (cosf(yaw) + sinf(yaw)), r * (sinf(yaw) - cosf(yaw)), -r * sinf(pitch) + r * sinf(roll)};
-    Vector3 bl{r * (-cosf(yaw) + sinf(yaw)), r * (-sinf(yaw) - cosf(yaw)), -r * sinf(pitch) - r * sinf(roll)};
+    Vector3 fr{r * (cosf(yaw) + sinf(yaw)), r * (-sinf(yaw) + cosf(yaw)), -r * sinf(roll) - r * sinf(pitch)};
+    Vector3 fl{r * (cosf(yaw) - sinf(yaw)), r * (-sinf(yaw) - cosf(yaw)), r * sinf(roll) - r * sinf(pitch)};
+    Vector3 br{r * (-cosf(yaw) + sinf(yaw)), r * (sinf(yaw) + cosf(yaw)), -r * sinf(roll) + r * sinf(pitch)};
+    Vector3 bl{r * (-cosf(yaw) - sinf(yaw)), r * (sinf(yaw) - cosf(yaw)), r * sinf(roll) + r * sinf(pitch)};
 
     Vector3 front_right{x + fr.x, y + fr.y, z + fr.z};
     Vector3 front_left{x + fl.x, y + fl.y, z + fl.z};
@@ -229,13 +229,13 @@ void MainWindow::draw_scatter() {
     ins_data->clear();
 
     for (auto motor: motors) {
-        *vis_data << QVector3D(motor.x, motor.z, motor.y);
+        *vis_data << QVector3D(motor.y, motor.z, motor.x);
     }
 
 //    *vis_data << QVector3D(x, z, y);
-    *vis_data << QVector3D(x, 0, y);
+    *vis_data << QVector3D(y, 0, x);
     auto [insx, insy, insz] = drone.controller.position_global;
-    *ins_data << QVector3D(insx, insz, insy);
+    *ins_data << QVector3D(insy, insz, insx);
 
     vis_series->dataProxy()->resetArray(vis_data);
     ins_series->dataProxy()->resetArray(ins_data);
@@ -245,7 +245,7 @@ void MainWindow::draw_scatter() {
 
 void MainWindow::rescale_axes() {
     auto [x, y, z] = drone.position;
-    float pos[3] = {x, z, y};
+    float pos[3] = {y, z, x};
     for (int i = 0; i < 3; i++) {
         auto &ax = vis_plot->axes()[i];
         if (pos[i] > ax->max()) {
