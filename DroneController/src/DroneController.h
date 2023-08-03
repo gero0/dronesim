@@ -66,6 +66,7 @@ public:
     void RTO();
 
     Vector3 position_global{0.0f, 0.0f, 0.0f};
+    Vector3 hover_setpoint {0.0f, 0.0f, 0.0f};
 private:
     SensorReader *sensor_reader;
 
@@ -90,8 +91,8 @@ private:
     MotorDriver *back_left;
     MotorDriver *back_right;
 
-    PID position_x_pid{1.0f, 0.01f, 0.2f, -1.0f, 1.0f};
-    PID position_y_pid{1.0f, 0.01f, 0.2f, -1.0f, 1.0f};
+    PID position_x_pid{1.0f, 0.01f, 0.1f, -1.0f, 1.0f};
+    PID position_y_pid{1.0f, 0.01f, 0.1f, -1.0f, 1.0f};
 
     PID thrust_pid{4.0f, 0.5f, 1.0f, 0.0f, 1.0f};
     PID pitch_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
@@ -102,7 +103,6 @@ private:
     Rotation rotation{0.0f, 0.0f, 0.0f};
     Rotation angular_velocity{0.0f, 0.0f, 0.0f};
 
-    Vector3 hover_setpoint {0.0f, 0.0f, 0.0f};
     ControlState controlState = ControlState::PointHover;
 };
 

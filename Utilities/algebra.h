@@ -48,8 +48,6 @@ struct Vector3 {
 
 };
 
-//Vector3 rotate_reference_frame(Vector3 v, float yaw_angle);
-
 struct Rotation {
     float pitch;
     float yaw;
@@ -88,6 +86,8 @@ struct Rotation {
 
 };
 
-Vector3 rotate_vector(const Vector3& v, const Rotation& r);
+Vector3 body_to_earth(const Vector3 &v, const Rotation &r);
+Vector3 earth_to_body(const Vector3 &v, const Rotation &r);
+Vector3 rotate_flat(Vector3 v, float yaw_angle);
 
 #endif //PLOTTING_ALGEBRA_H

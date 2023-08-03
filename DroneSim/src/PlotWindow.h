@@ -17,6 +17,8 @@ public:
     PIDPlot* pitch_plot;
     PIDPlot* roll_plot;
     PIDPlot* yaw_plot;
+    PIDPlot* x_plot;
+    PIDPlot* y_plot;
 private:
     QTabWidget* tabs;
     QHBoxLayout* layout;

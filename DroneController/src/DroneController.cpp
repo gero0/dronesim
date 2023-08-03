@@ -16,7 +16,7 @@ void DroneController::update(float dt) {
     rotation.yaw = yaw_og;
 
     Vector3 acceleration = sensor_reader->getAcceleration();
-    Vector3 acceleration_global = rotate_vector(acceleration, rotation);
+    Vector3 acceleration_global = body_to_earth(acceleration, rotation);
     velocity_global += acceleration_global * dt;
     position_global += velocity_global * dt;
 
@@ -39,8 +39,8 @@ void DroneController::control_update(float dt) {
     v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
 
     if(controlState==ControlState::PointHover){
-        Vector3 position_local = rotate_vector(position_global, rotation * -1.0f);
-        Vector3 sp_local = rotate_vector(hover_setpoint, rotation * -1.0f);
+        Vector3 position_local = rotate_flat(position_global, -rotation.yaw);
+        Vector3 sp_local = rotate_flat(hover_setpoint, -rotation.yaw);
         auto px = position_x_pid.update(sp_local.x, position_local.x, dt);
         auto py = position_y_pid.update(sp_local.y, position_local.y, dt);
         v_pitch = pitch_pid.update(px * max_angle, rotation.pitch, dt);

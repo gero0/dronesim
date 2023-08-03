@@ -12,6 +12,8 @@ PlotWindow::PlotWindow(QWidget *parent) {
     pitch_plot = new PIDPlot(this);
     roll_plot = new PIDPlot(this);
     yaw_plot = new PIDPlot(this);
+    x_plot = new PIDPlot(this);
+    y_plot = new PIDPlot(this);
 
     thrust_plot->set_x_range(0.0f, 3.0f);
     thrust_plot->set_y_range(0.0f, 20.0f);
@@ -27,6 +29,8 @@ PlotWindow::PlotWindow(QWidget *parent) {
     tabs->addTab(pitch_plot, "Pitch");
     tabs->addTab(roll_plot, "Roll");
     tabs->addTab(yaw_plot, "Yaw");
+    tabs->addTab(x_plot, "Hover X");
+    tabs->addTab(y_plot, "Hover Y");
 
     layout = new QHBoxLayout(this);
     layout->addWidget(tabs);

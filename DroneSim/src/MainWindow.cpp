@@ -192,6 +192,8 @@ void MainWindow::update_sim() {
     plot_window->pitch_plot->append(current_time, sp_pitch, drone.rotation.pitch);
     plot_window->roll_plot->append(current_time, sp_roll, drone.rotation.roll);
     plot_window->yaw_plot->append(current_time, sp_yaw, drone.rotation.yaw);
+    plot_window->x_plot->append(current_time, drone.controller.hover_setpoint.x, drone.position.x);
+    plot_window->y_plot->append(current_time, drone.controller.hover_setpoint.y, drone.position.y);
 
     bar_fl->setValue(static_cast<int> (drone.fl_driver.get_speed() * 100.0f));
     bar_fr->setValue(static_cast<int> (drone.fr_driver.get_speed() * 100.0f));
