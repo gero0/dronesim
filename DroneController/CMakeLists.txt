@@ -1,6 +1,14 @@
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS ./src/*.cpp ./src/*.h)
+cmake_minimum_required(VERSION 3.25)
+project(DroneController LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 23)
 
-add_library(DroneController ${SOURCES})
-target_include_directories(DroneController PRIVATE "../Utilities")
-target_link_libraries(DroneController PRIVATE Utilities)
-set_target_properties(DroneController PROPERTIES LINKER_LANGUAGE CXX)
+add_library(
+  DroneController_Lib
+  src/algebra.h
+  src/algebra.cpp
+  src/DroneController.h
+  src/DroneController.cpp
+  src/MotorDriver.h
+  src/SensorReader.h
+  src/PID.h
+  src/PID.cpp)
