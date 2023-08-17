@@ -4,21 +4,17 @@
 
 #include "DroneController.h"
 #include <iostream>
+#include <algorithm>
 
 void DroneController::update(float dt) {
-    altitude = sensor_reader->getAltitude();
-    angular_velocity += sensor_reader->getAngularAcceleration() * dt;
+    sensor_reader->update(dt);
+    rotation = sensor_reader->get_rotation();
+    Vector3 acceleration = sensor_reader->get_acceleration();
 
-    rotation += angular_velocity * dt;
-    //TODO: fix this and remove this workaround
-    float yaw_og = rotation.yaw;
-    rotation.normalize();
-    rotation.yaw = yaw_og;
-
-    Vector3 acceleration = sensor_reader->getAcceleration();
-    Vector3 acceleration_global = body_to_earth(acceleration, rotation);
-    velocity_global += acceleration_global * dt;
+    velocity_global += acceleration * dt;
     position_global += velocity_global * dt;
+
+    altitude = position_global.z;
 
     if(position_global.z <= 0){
         velocity_global.z = 0;

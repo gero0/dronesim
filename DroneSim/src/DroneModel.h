@@ -15,19 +15,18 @@ class DroneModel {
 public:
     Vector3 position{0.0, 0.0, 0.0};
     Vector3 velocity{0.0, 0.0, 0.0};
-    Vector3 velocity_local{0.0, 0.0, 0.0};
     Rotation rotation{0.0, 0.0, 0.0};
     Rotation angular_velocity{0.0, 0.0, 0.0};
     Vector3 acceleration{0.0, 0.0, 0.0};
     Vector3 acceleration_local{0.0, 0.0, 0.0};
-//    Vector3 angular_acceleration{0.0, 0.0, 0.0};
+
     const float arm_len = 0.1f;
     const float motor_max_thrust = 10.0f;//10N
     const float yaw_coeff = 0.01f;
     const float body_mass = 1.5f;
     const float body_radius = 0.03f;
     const float motor_mass = 0.03f;
-    const float g = 9.8;
+    const float g = 9.81;
     const float air_resistance_coeff = 2.0;
 
     const float rp_inertia_moment =

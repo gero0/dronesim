@@ -9,9 +9,9 @@
 
 class SensorReader {
 public:
-    virtual Vector3 getAcceleration() = 0;
-    virtual Rotation getAngularAcceleration() = 0;
-    virtual float getAltitude() = 0;
+    virtual Vector3 get_acceleration() = 0;
+    virtual Rotation get_rotation() = 0;
+    virtual void update(float dt) = 0;
 };
 
 #endif //DRONESIMPROJECT_SENSORREADER_H

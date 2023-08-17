@@ -5,8 +5,6 @@
 #include <QDebug>
 #include "DroneModel.h"
 
-
-
 void DroneModel::update(float dt) {
     //Assume linear relation of motor power and thrust
     float thrust_fl = fl_driver.get_speed() * motor_max_thrust;
@@ -47,15 +45,10 @@ void DroneModel::update(float dt) {
     if (position.z <= 0.0f) {
         position.z = 0.0f;
         velocity.z = 0.0f;
-        velocity_local.z = 0.0f;
     }
 
-    acceleration_local = earth_to_body(acceleration, rotation);
-    velocity_local = earth_to_body(velocity, rotation);
-
-    sensor_mock.acceleration = acceleration_local;
+    sensor_mock.acceleration = acceleration;
     sensor_mock.angular_acceleration = angular_acceleration;
-    sensor_mock.altitude = position.z;
 
     controller.update(dt);
 }

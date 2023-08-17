@@ -9,18 +9,29 @@
 
 class SensorReaderMock : public SensorReader{
 public:
-    Vector3 getAcceleration() override{
+    Vector3 get_acceleration() override{
         return acceleration;
     }
-    Rotation getAngularAcceleration() override{
-        return angular_acceleration;
+    Rotation get_rotation() override{
+        return rotation;
     }
-    float getAltitude() override{
-        return altitude;
+//    float get_altitude() override{
+//        return altitude;
+//    }
+
+    void update(float dt) override{
+        angular_velocity += angular_acceleration * dt;
+        rotation += angular_velocity * dt;
+        //TODO: fix this and remove this workaround
+        float yaw_og = rotation.yaw;
+        rotation.normalize();
+        rotation.yaw = yaw_og;
     }
 
+    Rotation rotation {0,0,0};
     Vector3 acceleration {0.0f,0.0f,0.0f};
     Rotation angular_acceleration {0.0f,0.0f,0.0f};
+    Rotation angular_velocity {0.0f,0.0f,0.0f};
     float altitude = 0.0f;
 };
 

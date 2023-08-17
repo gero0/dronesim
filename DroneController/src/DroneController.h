@@ -81,6 +81,7 @@ private:
     float v_yaw = 0.0f;
 
     float altitude = 0.0f;
+    const float g = 9.81;
 
     const float max_angle = (45.0f / 180.0f) * M_PI;
 
