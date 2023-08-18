@@ -53,7 +53,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void rtos_delay(uint32_t ms);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

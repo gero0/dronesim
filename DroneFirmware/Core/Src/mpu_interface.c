@@ -3,6 +3,8 @@
 //
 
 #include "../Inc/mpu_interface.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 I2C_HandleTypeDef* hi2c;
 
@@ -27,11 +29,11 @@ unsigned long f103_i2c_read(uint8_t addr, uint8_t reg, uint8_t len, uint8_t* dat
 }
 
 void f103_delay_ms(unsigned long ms){
-    HAL_Delay(ms);
+    vTaskDelay( ms/ portTICK_RATE_MS );
 }
 
 unsigned long f103_get_ms(unsigned long ms){
-    return HAL_GetTick();
+    return xTaskGetTickCount();
 }
 
 int reg_int_cb(struct int_param_s *int_param)
