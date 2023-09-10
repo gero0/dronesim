@@ -31,6 +31,8 @@
 #include "MotorDriverMock.h"
 #include "DroneController.h"
 #include "FreeRTOSConfig.h"
+#include "nRF24_Defs.h"
+#include "message.h"
 
 extern "C" {
 #include "nRF24.h"
@@ -66,6 +68,8 @@ MPU6050Driver mpu_driver;
 MotorDriverMock motor_mocks[4];
 DroneController controller(&motor_mocks[0], &motor_mocks[1], &motor_mocks[2], &motor_mocks[3], &mpu_driver);
 SemaphoreHandle_t controller_mutex;
+volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,15 +113,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void ControlTask(void *pvParameters) {
+    vTaskDelay(500 / portTICK_RATE_MS);
     bool ok = mpu_driver.init_hardware(&hi2c1);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         while (true) {}
+        //emergencystop()
     }
     ok = mpu_driver.calibrate();
     if (!ok) {
         printf("MPU Calibration Error!\r\n");
         while (true) {}
+        //emergencystop()
     }
     HAL_TIM_Base_Start_IT(&htim3);
 
@@ -136,25 +143,134 @@ void ControlTask(void *pvParameters) {
     vTaskDelete(NULL);
 }
 
-void CommTask(void *pvParameters) {
+enum class CommState {
+    Init,
+    Listen,
+    Send,
+    ConnLost,
+    Error
+};
+
+bool init_transceiver() {
     vTaskDelay(100 / portTICK_RATE_MS);
     nRF24_Init(&hspi1);
     vTaskDelay(100 / portTICK_RATE_MS);
-    nRF24_SetRXAddress(0, (uint8_t *) "Nad");
-    nRF24_SetTXAddress((uint8_t *) "Odb");
-    nRF24_TX_Mode();
+    nRF24_SetRXAddress(0, (uint8_t *) "Dro");
+    nRF24_SetTXAddress((uint8_t *) "Pil");
+    nRF24_RX_Mode();
+    return true;
+}
+
+void CommTask(void *pvParameters) {
+    const TickType_t connlost_threshold = 3000;
+    CommState comm_state = CommState::Init;
+    TickType_t timestamp = xTaskGetTickCount();
+    Vector3 position_of_last_contact = {0.0f, 0.0f, 0.0f};
+    uint8_t input_buffer[NRF24_PAYLOAD_SIZE];
+    memset(input_buffer, 0, NRF24_PAYLOAD_SIZE);
+    Message output_msg;
+
     while (1) {
-        const char *message = "TESTTESTTESTTESTTESTTESTTEST\r\n";
-        nRF24_WriteTXPayload((uint8_t *) message);
-        vTaskDelay(1 / portTICK_RATE_MS);
-        nRF24_WaitTX();
-        HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-        xSemaphoreTake(controller_mutex, portMAX_DELAY);
-        Vector3 accel = mpu_driver.get_acceleration();
-        Rotation rot = mpu_driver.get_rotation();
-        Vector3 pos = controller.position_global;
-        xSemaphoreGive(controller_mutex);
-        vTaskDelay(10 / portTICK_RATE_MS);
+        switch (comm_state) {
+            case CommState::Init: {
+                bool ok = init_transceiver();
+                if (ok) {
+                    comm_state = CommState::Listen;
+                } else {
+                    comm_state = CommState::Error;
+                }
+            }
+                break;
+
+            case CommState::Listen:
+                HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, static_cast<GPIO_PinState>(false));
+                if (nRF24_RXAvailible()) {
+                    nRF24_ReadRXPaylaod(input_buffer);
+                    Message msg = parse_message(input_buffer);
+                    timestamp = xTaskGetTickCount();
+                    switch (msg.type) {
+                        case HeartBeat:
+                            HAL_GPIO_TogglePin(LD1_GPIO_Port,  LD1_Pin);
+                            break;
+                        case AnglesInput:
+                            //TODO;
+                            break;
+                        case AltitudeInput:
+                            //TODO;
+                            break;
+                        case HoldCommand:
+                            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                            controller.hover();
+                            xSemaphoreGive(controller_mutex);
+                            break;
+                        case RTOCommand:
+                            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                            controller.RTO();
+                            xSemaphoreGive(controller_mutex);
+                            break;
+                        case GetAngles: {
+                            //                            TODO: Replace with calls to Controller
+//                            Rotation rot = mpu_driver.get_rotation();
+//                            output_msg.type = GetAngles;
+//                            memcpy(output_msg.data, &rot, sizeof(rot));
+//                            comm_state = CommState::Send;
+//                            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                            controller.angles
+//                            xSemaphoreGive(controller_mutex);
+                        }
+                            break;
+                        case GetPosition: {
+                            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                            Vector3 pos = controller.position_global;
+                            xSemaphoreGive(controller_mutex);
+                            output_msg.type = GetPosition;
+                            memcpy(output_msg.data, &pos, sizeof(pos));
+                            comm_state = CommState::Send;
+                        }
+                            break;
+                        case GetAltitude:
+                            //TODO
+                            break;
+                        case GetStatus:
+                            //TODO
+                            break;
+                    }
+                }
+                if (xTaskGetTickCount() - timestamp > connlost_threshold){
+//                    comm_state = CommState::ConnLost;
+                }
+                break;
+
+            case CommState::Send:
+                HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, static_cast<GPIO_PinState>(true));
+                nRF24_TX_Mode();
+                vTaskDelay(2 / portTICK_RATE_MS);
+                nRF24_WriteTXPayload(reinterpret_cast<uint8_t*>(&output_msg));
+                //Todo: timeout wait
+                nRF24_WaitTX();
+                nRF24_RX_Mode();
+                comm_state = CommState::Listen;
+                break;
+
+            case CommState::ConnLost:
+                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                controller.hover();
+                controller.hover_setpoint = position_of_last_contact;
+                xSemaphoreGive(controller_mutex);
+                break;
+
+            case CommState::Error:
+                //emergencystop()
+                break;
+        }
+
+
+//        xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//        Vector3 accel = mpu_driver.get_acceleration();
+//        Rotation rot = mpu_driver.get_rotation();
+//        Vector3 pos = controller.position_global;
+//        xSemaphoreGive(controller_mutex);
+//        vTaskDelay(10 / portTICK_RATE_MS);
     }
 
     vTaskDelete(NULL);
