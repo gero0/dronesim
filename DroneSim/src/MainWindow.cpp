@@ -187,13 +187,14 @@ void MainWindow::update_sim() {
     drone.update(dt);
 
     auto [sp_thrust, sp_pitch, sp_roll, sp_yaw] = drone.controller.get_setpoints();
+    auto hover_sp = drone.controller.get_hover_setpoint();
 
     plot_window->thrust_plot->append(current_time, sp_thrust, drone.position.z);
     plot_window->pitch_plot->append(current_time, sp_pitch, drone.rotation.pitch);
     plot_window->roll_plot->append(current_time, sp_roll, drone.rotation.roll);
     plot_window->yaw_plot->append(current_time, sp_yaw, drone.rotation.yaw);
-    plot_window->x_plot->append(current_time, drone.controller.hover_setpoint.x, drone.position.x);
-    plot_window->y_plot->append(current_time, drone.controller.hover_setpoint.y, drone.position.y);
+    plot_window->x_plot->append(current_time, hover_sp.x, drone.position.x);
+    plot_window->y_plot->append(current_time, hover_sp.y, drone.position.y);
 
     bar_fl->setValue(static_cast<int> (drone.fl_driver.get_speed() * 100.0f));
     bar_fr->setValue(static_cast<int> (drone.fr_driver.get_speed() * 100.0f));
@@ -236,7 +237,7 @@ void MainWindow::draw_scatter() {
 
 //    *vis_data << QVector3D(x, z, y);
     *vis_data << QVector3D(y, 0, x);
-    auto [insx, insy, insz] = drone.controller.position_global;
+    auto [insx, insy, insz] = drone.controller.get_position();
     *ins_data << QVector3D(insy, insz, insx);
 
     vis_series->dataProxy()->resetArray(vis_data);

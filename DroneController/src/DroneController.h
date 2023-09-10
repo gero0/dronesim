@@ -16,7 +16,7 @@ struct PidValues {
     float v_yaw;
 };
 
-enum class ControlState{
+enum class ControlState {
     PointHover,
     Direct,
 };
@@ -65,8 +65,20 @@ public:
 
     void RTO();
 
-    Vector3 position_global{0.0f, 0.0f, 0.0f};
-    Vector3 hover_setpoint {0.0f, 0.0f, 0.0f};
+    void reset_position();
+
+    void set_hover_setpoint(Vector3 sp);
+
+    Vector3 get_position();
+
+    Vector3 get_hover_setpoint();
+
+    Rotation get_rotation();
+
+    float get_altitude();
+
+    float get_radar_altitude();
+
 private:
     SensorReader *sensor_reader;
 
@@ -81,9 +93,13 @@ private:
     float v_yaw = 0.0f;
 
     float altitude = 0.0f;
+    float radar_altitude = 0.0f;
     const float g = 9.81;
 
     const float max_angle = (45.0f / 180.0f) * M_PI;
+
+    Vector3 position_global{0.0f, 0.0f, 0.0f};
+    Vector3 hover_setpoint{0.0f, 0.0f, 0.0f};
 
     void control_update(float dt);
 

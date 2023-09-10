@@ -125,5 +125,33 @@ void DroneController::RTO() {
     hover_setpoint = {0.0f, 0.0f, 0.0f};
 }
 
+Vector3 DroneController::get_position() {
+    return position_global;
+}
+
+Rotation DroneController::get_rotation() {
+    return rotation;
+}
+
+Vector3 DroneController::get_hover_setpoint() {
+    return hover_setpoint;
+}
+
+void DroneController::reset_position() {
+    position_global = {.0f, .0f, .0f};
+}
+
+void DroneController::set_hover_setpoint(Vector3 sp) {
+    hover_setpoint = sp;
+}
+
+float DroneController::get_altitude() {
+    return altitude;
+}
+
+float DroneController::get_radar_altitude() {
+    return radar_altitude;
+}
+
 
 

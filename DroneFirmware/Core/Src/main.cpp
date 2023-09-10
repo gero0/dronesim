@@ -221,7 +221,7 @@ void CommTask(void *pvParameters) {
                             break;
                         case GetPosition: {
                             xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                            Vector3 pos = controller.position_global;
+                            Vector3 pos = controller.get_position();
                             xSemaphoreGive(controller_mutex);
                             output_msg.type = GetPosition;
                             memcpy(output_msg.data, &pos, sizeof(pos));
@@ -255,7 +255,7 @@ void CommTask(void *pvParameters) {
             case CommState::ConnLost:
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller.hover();
-                controller.hover_setpoint = position_of_last_contact;
+                controller.set_hover_setpoint(position_of_last_contact);
                 xSemaphoreGive(controller_mutex);
                 break;
 
