@@ -89,6 +89,9 @@ add_executable(
         FreeRTOS/Source/portable/MemMang/heap_4.c
         FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c)
 
+set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
+set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
+
 target_link_libraries(EXEC PRIVATE -lc -lm -lnosys -llibmplmpu
         DroneController_Lib Message_Lib)
 

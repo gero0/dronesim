@@ -5,6 +5,7 @@
 #ifndef DRONESIMPROJECT_DRONECONTROLLER_H
 #define DRONESIMPROJECT_DRONECONTROLLER_H
 
+#include <array>
 #include "SensorReader.h"
 #include "MotorDriver.h"
 #include "PID.h"
@@ -75,9 +76,15 @@ public:
 
     Rotation get_rotation();
 
+    Rotation get_rotation_setpoints();
+
     float get_altitude();
 
     float get_radar_altitude();
+
+    float get_altitude_setpoint() const;
+
+    std::array<float, 4> get_motor_speeds();
 
 private:
     SensorReader *sensor_reader;

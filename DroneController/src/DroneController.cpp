@@ -5,6 +5,7 @@
 #include "DroneController.h"
 #include <iostream>
 #include <algorithm>
+#include <array>
 
 void DroneController::update(float dt) {
     sensor_reader->update(dt);
@@ -16,14 +17,14 @@ void DroneController::update(float dt) {
 
     altitude = position_global.z;
 
-    if(position_global.z <= 0){
+    if (position_global.z <= 0) {
         velocity_global.z = 0;
         position_global.z = 0;
     }
 
-    if(roll_setpoint == 0.0f && pitch_setpoint == 0.0f){
+    if (roll_setpoint == 0.0f && pitch_setpoint == 0.0f) {
         controlState = ControlState::PointHover;
-    }else{
+    } else {
         controlState = ControlState::Direct;
     }
 
@@ -34,14 +35,14 @@ void DroneController::control_update(float dt) {
     v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
     v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
 
-    if(controlState==ControlState::PointHover){
+    if (controlState == ControlState::PointHover) {
         Vector3 position_local = rotate_flat(position_global, -rotation.yaw);
         Vector3 sp_local = rotate_flat(hover_setpoint, -rotation.yaw);
         auto px = position_x_pid.update(sp_local.x, position_local.x, dt);
         auto py = position_y_pid.update(sp_local.y, position_local.y, dt);
         v_pitch = pitch_pid.update(px * max_angle, rotation.pitch, dt);
         v_roll = roll_pid.update(py * max_angle, rotation.roll, dt);
-    }else if (controlState == ControlState::Direct){
+    } else if (controlState == ControlState::Direct) {
         v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
         v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);
     }
@@ -120,6 +121,7 @@ void DroneController::hover() {
     hover_setpoint = position_global;
     controlState = ControlState::PointHover;
 }
+
 void DroneController::RTO() {
     hover();
     hover_setpoint = {0.0f, 0.0f, 0.0f};
@@ -151,6 +153,18 @@ float DroneController::get_altitude() {
 
 float DroneController::get_radar_altitude() {
     return radar_altitude;
+}
+
+std::array<float, 4> DroneController::get_motor_speeds() {
+    return {front_left->get_speed(), front_right->get_speed(), back_left->get_speed(), back_right->get_speed()};
+}
+
+Rotation DroneController::get_rotation_setpoints() {
+    return {pitch_setpoint, yaw_setpoint, roll_setpoint};
+}
+
+float DroneController::get_altitude_setpoint() const {
+    return altitude_setpoint;
 }
 
 
