@@ -6,29 +6,26 @@
  */
 
 #include "main.h"
+#include <stdbool.h>
+#include <memory.h>
 
 #include "nRF24.h"
 #include "nRF24_Defs.h"
+
+#define NRF24_ADDR_SIZE	3
+#define NRF24_CSN_GPIO_Port GPIOA
+#define NRF24_CSN_Pin  GPIO_PIN_1
+#define NRF24_CE_GPIO_Port GPIOA
+#define NRF24_CE_Pin  GPIO_PIN_2
 
 static SPI_HandleTypeDef *hspi_nrf;
 
 static uint8_t addr_p0_backup[NRF24_ADDR_SIZE];
 
-extern volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
+static uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
+static volatile uint8_t Nrf24InterruptFlag;
 
-//
-// BASIC READ/WRITE FUNCTIONS
-//
-// Define these function for your MCU
-//
-
-#define NRF24_CSN_HIGH		HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_SET)
-#define NRF24_CSN_LOW		HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_RESET)
-
-#define NRF24_CE_HIGH		HAL_GPIO_WritePin(NRF24_CE_GPIO_Port, NRF24_CE_Pin, GPIO_PIN_SET)
-#define NRF24_CE_LOW		HAL_GPIO_WritePin(NRF24_CE_GPIO_Port, NRF24_CE_Pin, GPIO_PIN_RESET)
-
-static void nRF24_Delay(uint8_t Time)
+static void nRF24_Delay_ms(uint8_t Time)
 {
 	HAL_Delay(1);
 }
@@ -42,6 +39,24 @@ static void nRF24_ReadSpi(uint8_t *Data, uint8_t Length)
 {
 	HAL_SPI_Receive(hspi_nrf, Data, Length, 1000);
 }
+
+
+bool nRF24_TXDone() {
+    uint8_t status = nRF24_ReadStatus();
+    return (status & (1 << NRF24_MAX_RT)) || (status & (1 << NRF24_TX_DS));
+}
+
+//
+// BASIC READ/WRITE FUNCTIONS
+//
+// Define these function for your MCU
+//
+
+#define NRF24_CSN_HIGH		HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_SET)
+#define NRF24_CSN_LOW		HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_RESET)
+
+#define NRF24_CE_HIGH		HAL_GPIO_WritePin(NRF24_CE_GPIO_Port, NRF24_CE_Pin, GPIO_PIN_SET)
+#define NRF24_CE_LOW		HAL_GPIO_WritePin(NRF24_CE_GPIO_Port, NRF24_CE_Pin, GPIO_PIN_RESET)
 
 //
 // END OF BASIC READ/WRITE FUNCTIONS
@@ -108,7 +123,6 @@ void nRF24_RX_Mode(void)
 	config |= (1<<NRF24_PWR_UP);
 	// PRIM_RX bit set
 	config |= (1<<NRF24_PRIM_RX);
-//	config &= ~(1<<NRF24_PRIM_RX);
 	nRF24_WriteConfig(config);
 	// Reset status
 	nRF24_WriteStatus((1<<NRF24_RX_DR)|(1<<NRF24_TX_DS)|(1<<NRF24_MAX_RT));
@@ -116,9 +130,9 @@ void nRF24_RX_Mode(void)
 	nRF24_FlushRX();
 	// Flush TX
 	nRF24_FlushTX();
-config = nRF24_ReadConfig();
+
 	NRF24_CE_HIGH;
-	nRF24_Delay(1);
+	nRF24_Delay_ms(1);
 }
 
 void nRF24_TX_Mode(void)
@@ -137,7 +151,8 @@ void nRF24_TX_Mode(void)
 	nRF24_FlushRX();
 	// Flush TX
 	nRF24_FlushTX();
-	nRF24_Delay(1);
+
+	nRF24_Delay_ms(1);
 }
 
 
@@ -179,6 +194,59 @@ uint8_t nRF24_ReadStatus(void)
 void nRF24_WriteStatus(uint8_t st)
 {
 	nRF24_WriteRegister(NRF24_STATUS, st);
+}
+
+//
+// FIFO Status
+//
+
+uint8_t nRF24_ReadFifoStatus(void)
+{
+	return (nRF24_ReadRegister(NRF24_FIFO_STATUS));
+}
+
+void nRF24_WriteFifoStatus(uint8_t st)
+{
+	nRF24_WriteRegister(NRF24_FIFO_STATUS, st);
+}
+
+uint8_t nRF24_IsBitSetInFifoStatus(uint8_t Bit)
+{
+	uint8_t FifoStatus;
+
+	FifoStatus = nRF24_ReadFifoStatus();
+
+	if(FifoStatus & (1<<Bit))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+uint8_t nRF24_IsTxReuse(void)
+{
+	return nRF24_IsBitSetInFifoStatus(NRF24_TX_REUSE);
+}
+
+uint8_t nRF24_IsTxFull(void)
+{
+	return nRF24_IsBitSetInFifoStatus(NRF24_TX_FULL);
+}
+
+uint8_t nRF24_IsTxEmpty(void)
+{
+	return nRF24_IsBitSetInFifoStatus(NRF24_TX_EMPTY);
+}
+
+uint8_t nRF24_IsRxFull(void)
+{
+	return nRF24_IsBitSetInFifoStatus(NRF24_RX_FULL);
+}
+
+uint8_t nRF24_IsRxEmpty(void)
+{
+	return nRF24_IsBitSetInFifoStatus(NRF24_RX_EMPTY);
 }
 
 void nRF24_FlushRX(void)
@@ -314,6 +382,21 @@ void nRF24_ClearInterrupts(void)
 	nRF24_WriteStatus(status);
 }
 
+uint8_t nRF24_GetDynamicPayloadSize(void)
+{
+    uint8_t result = 0;
+
+    result = nRF24_ReadRegister(NRF24_CMD_R_RX_PL_WID);
+
+    if (result > 32) // Something went wrong :)
+    {
+        nRF24_FlushRX();
+        nRF24_Delay_ms(2);
+        return 0;
+    }
+    return result;
+}
+
 void nRF24_EnableRXDataReadyIRQ(uint8_t onoff)
 {
 	uint8_t config = nRF24_ReadConfig();
@@ -350,41 +433,67 @@ void nRF24_EnableMaxRetransmitIRQ(uint8_t onoff)
 	nRF24_WriteConfig(config);
 }
 
-void nRF24_WriteTXPayload(uint8_t * data)
+void nRF24_WriteTXPayload(uint8_t * data, uint8_t size)
 {
+#if (NRF24_DYNAMIC_PAYLOAD == 1)
+	nRF24_WriteRegisters(NRF24_CMD_W_TX_PAYLOAD, data, size);
+#else
 	nRF24_WriteRegisters(NRF24_CMD_W_TX_PAYLOAD, data, NRF24_PAYLOAD_SIZE);
+#endif
 }
 
 void nRF24_WaitTX()
 {
 	uint8_t status;
 	NRF24_CE_HIGH;
-	nRF24_Delay(1);
+	nRF24_Delay_ms(1);
 	NRF24_CE_LOW;
 	do
 	{
-		nRF24_Delay(1);
+		nRF24_Delay_ms(1);
 		status = nRF24_ReadStatus();
 	}while(!((status & (1<<NRF24_MAX_RT)) || (status & (1<<NRF24_TX_DS))));
 
 }
 
-void nRF24_ReadRXPaylaod(uint8_t *data)
+void nRF24_ReadRXPaylaod(uint8_t *data, uint8_t *size)
 {
+#if (NRF24_DYNAMIC_PAYLOAD == 1)
+	*size = nRF24_GetDynamicPayloadSize();
+	nRF24_ReadRegisters(NRF24_CMD_R_RX_PAYLOAD, data, *size);
+#else
 	nRF24_ReadRegisters(NRF24_CMD_R_RX_PAYLOAD, data, NRF24_PAYLOAD_SIZE);
+#endif
+#if (NRF24_INTERRUPT_MODE == 0)
 	nRF24_WriteRegister(NRF24_STATUS, (1<NRF24_RX_DR));
 	if(nRF24_ReadStatus() & (1<<NRF24_TX_DS))
 		nRF24_WriteRegister(NRF24_STATUS, (1<<NRF24_TX_DS));
+#endif
 }
 
-void nRF24_SendPacket(uint8_t* data)
+nRF24_TX_Status nRF24_SendPacket(uint8_t* Data, uint8_t Size)
 {
+	if(Size > 32)
+		return NRF24_NO_TRANSMITTED_PACKET;
 
+	nRF24_WriteTXPayload(Data, Size);
+	nRF24_WaitTX();
+
+	return NRF24_TRANSMITTED_PACKET;
 }
 
-void nRF24_ReceivePacket(uint8_t* data)
+nRF24_RX_Status nRF24_ReceivePacket(uint8_t* Data, uint8_t *Size)
 {
-
+#if (NRF24_INTERRUPT_MODE == 0)
+	if(nRF24_RXAvailible())
+	{
+#endif
+		nRF24_ReadRXPaylaod(Data, Size);
+#if (NRF24_INTERRUPT_MODE == 0)
+		return NRF24_RECEIVED_PACKET;
+	}
+	return NRF24_NO_RECEIVED_PACKET;
+#endif
 }
 
 uint8_t nRF24_RXAvailible(void)
@@ -404,28 +513,80 @@ uint8_t nRF24_RXAvailible(void)
 
 void nRF24_IRQ_Handler(void)
 {
-	uint8_t status = nRF24_ReadStatus();
 
-	// RX FIFO Interrupt
-	if ((status & (1 << NRF24_RX_DR)))
+	Nrf24InterruptFlag = 1;
+}
+
+void nRF24_IRQ_Read(void)
+{
+	if(Nrf24InterruptFlag == 1)
 	{
-		nrf24_rx_flag = 1;
-		status |= (1<<NRF24_RX_DR); // Interrupt flag clear
-		nRF24_WriteStatus(status);
+		Nrf24InterruptFlag = 0;
+
+		uint8_t status = nRF24_ReadStatus();
+		uint8_t ClearIrq = 0;
+		// RX FIFO Interrupt
+		if ((status & (1 << NRF24_RX_DR)))
+		{
+			nrf24_rx_flag = 1;
+			ClearIrq |= (1<<NRF24_RX_DR); // Interrupt flag clear
+		}
+		// TX Data Sent interrupt
+		if ((status & (1 << NRF24_TX_DS)))
+		{
+			nrf24_tx_flag = 1;
+			ClearIrq |= (1<<NRF24_TX_DS); // Interrupt flag clear
+		}
+		// Max Retransmits interrupt
+		if ((status & (1 << NRF24_MAX_RT)))
+		{
+			nrf24_mr_flag = 1;
+			ClearIrq |= (1<<NRF24_MAX_RT); // Interrupt flag clear
+		}
+
+		nRF24_WriteStatus(ClearIrq);
 	}
-	// TX Data Sent interrupt
-	if ((status & (1 << NRF24_TX_DS)))
+}
+
+//
+// nRF24 Event for Interrupt mode
+//
+
+__weak void nRF24_EventRxCallback(void)
+{
+
+}
+
+__weak void nRF24_EventTxCallback(void)
+{
+
+}
+
+__weak void nRF24_EventMrCallback(void)
+{
+
+}
+
+void nRF24_Event(void)
+{
+	nRF24_IRQ_Read(); // Check if there was any interrupt
+
+	if(nrf24_rx_flag)
 	{
-		nrf24_tx_flag = 1;
-		status |= (1<<NRF24_TX_DS); // Interrupt flag clear
-		nRF24_WriteStatus(status);
+		nRF24_EventRxCallback();
+		nrf24_rx_flag = 0;
 	}
-	// Max Retransmits interrupt
-	if ((status & (1 << NRF24_MAX_RT)))
+
+	if(nrf24_tx_flag)
 	{
-		nrf24_mr_flag = 1;
-		status |= (1<<NRF24_MAX_RT); // Interrupt flag clear
-		nRF24_WriteStatus(status);
+		nRF24_EventTxCallback();
+		nrf24_tx_flag = 0;
+	}
+
+	if(nrf24_mr_flag)
+	{
+		nRF24_EventMrCallback();
+		nrf24_mr_flag = 0;
 	}
 }
 
@@ -436,27 +597,33 @@ void nRF24_Init(SPI_HandleTypeDef *hspi)
 	NRF24_CE_LOW;
 	NRF24_CSN_HIGH;
 
-	nRF24_Delay(5); // Wait for radio power up
+	nRF24_Delay_ms(5); // Wait for radio power up
 
 	nRF24_SetPALevel(NRF24_PA_PWR_0dBM); // Radio power
 	nRF24_SetDataRate(NRF24_RF_DR_250KBPS); // Data Rate
 	nRF24_EnableCRC(1); // Enable CRC
 	nRF24_SetCRCLength(NRF24_CRC_WIDTH_1B); // CRC Length 1 byte
 	nRF24_SetRetries(0x04, 0x07); // 1000us, 7 times
+
+#if (NRF24_DYNAMIC_PAYLOAD == 1)
+	nRF24_WriteRegister(NRF24_FEATURE, nRF24_ReadRegister(NRF24_FEATURE) | (1<<NRF24_EN_DPL)); // Enable dynamic payload feature
+	nRF24_WriteRegister(NRF24_DYNPD, 0x3F); // Enable dynamic payloads for all pipes
+#else
 	nRF24_WriteRegister(NRF24_DYNPD, 0); // Disable dynamic payloads for all pipes
-	nRF24_SetRFChannel(0); // Set RF channel for transmission
 	nRF24_SetPayloadSize(0, NRF24_PAYLOAD_SIZE); // Set 32 bytes payload for pipe 0
+#endif
+	nRF24_SetRFChannel(0); // Set RF channel for transmission
 	nRF24_EnablePipe(0, 1); // Enable pipe 0
 	nRF24_AutoACK(0, 1); // Enable auto ACK for pipe 0
 	nRF24_SetAddressWidth(NRF24_ADDR_SIZE); // Set address size
 
-	nRF24_Delay(20);
+	nRF24_Delay_ms(1);
 
-	nRF24_EnableRXDataReadyIRQ(0);
+	nRF24_EnableRXDataReadyIRQ(1);
 	nRF24_EnableTXDataSentIRQ(0);
 	nRF24_EnableMaxRetransmitIRQ(0);
 
-	nRF24_Delay(20);
+	nRF24_Delay_ms(1);
 
 	nRF24_ClearInterrupts();
 }

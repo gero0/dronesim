@@ -8,13 +8,6 @@
 #ifndef INC_NRF24_NRF24_DEFS_H_
 #define INC_NRF24_NRF24_DEFS_H_
 
-#define NRF24_ADDR_SIZE	3
-
-#define NRF24_CSN_GPIO_Port GPIOC
-#define NRF24_CSN_Pin  GPIO_PIN_5
-#define NRF24_CE_GPIO_Port GPIOC
-#define NRF24_CE_Pin  GPIO_PIN_6
-
 //
 // Registers
 //
@@ -104,6 +97,7 @@
 #define NRF24_RX_FULL     1
 #define NRF24_RX_EMPTY    0
 #define NRF24_RPD         0x09
+#define NRF24_EN_DPL      2
 
 #define NRF24_PAYLOAD_SIZE 32
 

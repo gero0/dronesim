@@ -12,9 +12,11 @@ def get_float(list):
     aa = bytearray(list)
     return struct.unpack('<f', aa)[0]
 
+
 def get_int(list):
     aa = bytearray(list)
-    return struct.unpack('<i', aa)[0]
+    return struct.unpack('<I', aa)[0]
+
 
 def get_byte(list):
     return list
@@ -25,10 +27,11 @@ def clear():
     # for windows
     if name == 'nt':
         _ = system('cls')
- 
+
     # for mac and linux(here, os.name is 'posix')
     else:
         _ = system('clear')
+
 
 ser = serial.Serial("/dev/ttyACM0")
 while (True):
@@ -46,6 +49,8 @@ while (True):
     else:
         s = ser.read(62)
         bytes = list(s)
+        # print(bytes)
+        # exit()
         Pitch = get_float(bytes[0:4])
         Yaw = get_float(bytes[4:8])
         Roll = get_float(bytes[8:12])
@@ -64,11 +69,16 @@ while (True):
         resp_time = get_int(bytes[48:52])
         inp_time = get_int(bytes[52:56])
 
-
         clear()
-        print(f"X:{X:.2f} Y:{Y:.2f} Z:{Z:.2f}    P:{Pitch:.2f} R:{Roll:.2f} Y:{Yaw:.2f}")
-        print(f"Alt.(P):{press_alt:.2f} Alt (R):{radar_alt:.2f} M1:{motor_a} M2:{motor_b} M3:{motor_c} M4:{motor_d}")
-        print(f"Last msg type:{msg_type} Last msg time:{msg_time}\n Last resp type:{resp_type} Last resp time:{resp_time}")
+        print(
+            f"X:{X:.2f} Y:{Y:.2f} Z:{Z:.2f}    P:{Pitch:.2f} R:{Roll:.2f} Y:{Yaw:.2f}"
+        )
+        print(
+            f"Alt.(P):{press_alt:.2f} Alt (R):{radar_alt:.2f} M1:{motor_a} M2:{motor_b} M3:{motor_c} M4:{motor_d}"
+        )
+        print(
+            f"Last msg type:{msg_type} Last msg time:{msg_time}\n Last resp type:{resp_type} Last resp time:{resp_time}"
+        )
 
         header_pos = 0
         state = "HEADER"

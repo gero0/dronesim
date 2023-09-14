@@ -105,9 +105,9 @@ target_include_directories(
         madgwick/
         MPU/driver/include
         MPU/driver/eMPL
-        NRF
         FreeRTOS/Source/include
         FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
+        NRF
         ../DroneController/src
         ../Message/Inc)
 

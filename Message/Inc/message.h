@@ -6,15 +6,14 @@ extern "C" {
 #define MSG_DATA_SIZE 31
 
 typedef enum MessageType {
-    HeartBeat = 1,
-    AnglesInput = 2,
-    AltitudeInput = 3,
-    HoldCommand = 4,
-    RTOCommand = 5,
-    GetAngles = 6,
-    GetPosition = 7,
-    GetAltitude = 8,
-    GetStatus = 9,
+    AnglesInput = 0,
+    AltitudeInput = 1,
+    HoldCommand = 2,
+    RTOCommand = 3,
+    GetAngles = 4,
+    GetPosition = 5,
+    GetAltitude = 6,
+    GetStatus = 7,
 } MessageType;
 
 typedef struct Message {
