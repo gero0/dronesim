@@ -57,6 +57,7 @@ add_executable(
         madgwick/MadgwickAHRS.c
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
+        QMC/qmc5883l.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
@@ -108,6 +109,7 @@ target_include_directories(
         FreeRTOS/Source/include
         FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
         NRF
+        QMC
         ../DroneController/src
         ../Message/Inc)
 
