@@ -35,7 +35,7 @@ def main(stdscr):
     state = "HEADER"
     header = [11, 37]
     header_pos = 0
-    ser = serial.Serial("/dev/ttyACM0")
+    ser = serial.Serial("/dev/ttyACM6")
     stdscr.clear()
 
     while (True):

@@ -2,34 +2,36 @@
 // Created by gero on 8/9/23.
 //
 
-#ifndef DRONEFIRMWARE_MPU6050DRIVER_H
-#define DRONEFIRMWARE_MPU6050DRIVER_H
+#ifndef DRONEFIRMWARE_AHRS_H
+#define DRONEFIRMWARE_AHRS_H
 
 #include "stm32h7xx_hal.h"
 #include "algebra.h"
 #include "SensorReader.h"
+#include <Fusion.h>
 
-class MPU6050Driver : public SensorReader{
+class AHRS : public SensorReader {
 public:
-    bool init_hardware(I2C_HandleTypeDef* i2c);
+    bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c);
+
     bool calibrate() const;
+
     void sensor_update();
+
     Rotation get_rotation() override;
+
     Vector3 get_acceleration() override;
+
     void update(float dt) override;
+
 private:
     bool initialized = false;
-//    volatile float accel_gs[3];
     volatile float gyro_dps[3];
-//    volatile float angles[3];
     const float g_const = 9.81;
 
     const signed char orientation[9] = {1, 0, 0,
                                         0, 1, 0,
                                         0, 0, 1};
-
-    const int GYRO_FSR=2000;
-    const int ACC_FSR=8;
 
     static const int averaging_len = 64;
     Vector3 acceleration_current;
@@ -37,6 +39,11 @@ private:
     int acc_i = 0;
 
     Rotation rotation_current;
+
+    FusionVector accelerometer{.0f, .0f, .0f};
+    FusionVector gyroscope{.0f, .0f, .0f};
+    FusionVector magnetometer{.0f, .0f, .0f};
+    FusionAhrs ahrs;
 };
 
-#endif //DRONEFIRMWARE_MPU6050DRIVER_H
+#endif //DRONEFIRMWARE_AHRS_H

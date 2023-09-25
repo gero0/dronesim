@@ -42,6 +42,7 @@ add_compile_options(-ffunction-sections -fdata-sections -fno-common
 
 add_subdirectory(../DroneController DroneController)
 add_subdirectory(../Message Message)
+add_subdirectory(../Fusion/Fusion Fusion_dir)
 
 add_executable(
         EXEC
@@ -52,9 +53,8 @@ add_executable(
         Core/Src/system_stm32h7xx.c
         Core/Src/mpu_interface.c
         Core/Src/mpu_helpers.c
-        Core/Src/MPU6050Driver.cpp
-        Core/Inc/MPU6050Driver.h
-        madgwick/MadgwickAHRS.c
+        Core/Src/AHRS.cpp
+        Core/Inc/AHRS.h
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
         QMC/qmc5883l.c
@@ -94,7 +94,7 @@ set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(EXEC PRIVATE -lc -lm -lnosys -llibmplmpu
-        DroneController_Lib Message_Lib)
+        DroneController_Lib Message_Lib Fusion)
 
 target_include_directories(
         EXEC
@@ -103,7 +103,6 @@ target_include_directories(
         Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32H7xx/Include
         Drivers/CMSIS/Include
-        madgwick/
         MPU/driver/include
         MPU/driver/eMPL
         FreeRTOS/Source/include
@@ -111,7 +110,8 @@ target_include_directories(
         NRF
         QMC
         ../DroneController/src
-        ../Message/Inc)
+        ../Message/Inc
+        ../Fusion/Fusion)
 
 # add_compile_options(-Os)
 
