@@ -43,6 +43,7 @@ add_compile_options(-ffunction-sections -fdata-sections -fno-common
 add_subdirectory(../DroneController DroneController)
 add_subdirectory(../Message Message)
 add_subdirectory(../Fusion/Fusion Fusion_dir)
+add_subdirectory(../VL53L0X VL5)
 
 add_executable(
         EXEC
@@ -54,7 +55,8 @@ add_executable(
         Core/Src/mpu_interface.c
         Core/Src/mpu_helpers.c
         Core/Src/AHRS.cpp
-        Core/Inc/AHRS.h
+        Core/Src/vl53l0x_platform.c
+        Core/Src/vl53l0x_platform_log.c
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
         QMC/qmc5883l.c
@@ -94,7 +96,7 @@ set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(EXEC PRIVATE -lc -lm -lnosys -llibmplmpu
-        DroneController_Lib Message_Lib Fusion)
+        DroneController_Lib Message_Lib Fusion VL5_Lib)
 
 target_include_directories(
         EXEC
@@ -111,7 +113,8 @@ target_include_directories(
         QMC
         ../DroneController/src
         ../Message/Inc
-        ../Fusion/Fusion)
+        ../Fusion/Fusion
+        ../VL53L0X/core/inc)
 
 # add_compile_options(-Os)
 

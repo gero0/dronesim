@@ -138,7 +138,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 void ControlTask(void *pvParameters) {
     vTaskDelay(500 / portTICK_RATE_MS);
-    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1);
+    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         while (true) {}
@@ -412,7 +412,7 @@ int main(void)
 
     controller_mutex = xSemaphoreCreateMutex();
     xTaskCreate(CommTask, "CommTask", 200, NULL, 1, NULL);
-    xTaskCreate(ControlTask, "ControlTask", 300, NULL, 2, NULL);
+    xTaskCreate(ControlTask, "ControlTask", 600, NULL, 2, NULL);
     vTaskStartScheduler();
 
     while (1) {

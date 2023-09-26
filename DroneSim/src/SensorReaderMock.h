@@ -15,9 +15,13 @@ public:
     Rotation get_rotation() override{
         return rotation;
     }
-//    float get_altitude() override{
-//        return altitude;
-//    }
+    float get_altitude() override{
+        return altitude;
+    }
+
+    float get_radar_altitude() override{
+        return altitude;
+    }
 
     void update(float dt) override{
         angular_velocity += angular_acceleration * dt;

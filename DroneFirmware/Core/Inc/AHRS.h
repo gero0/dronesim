@@ -9,10 +9,11 @@
 #include "algebra.h"
 #include "SensorReader.h"
 #include <Fusion.h>
+#include "vl53l0x_api.h"
 
 class AHRS : public SensorReader {
 public:
-    bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c);
+    bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c);
 
     bool calibrate() const;
 
@@ -21,6 +22,10 @@ public:
     Rotation get_rotation() override;
 
     Vector3 get_acceleration() override;
+
+    virtual float get_altitude() override;
+
+    virtual float get_radar_altitude() override;
 
     void update(float dt) override;
 
@@ -44,6 +49,12 @@ private:
     FusionVector gyroscope{.0f, .0f, .0f};
     FusionVector magnetometer{.0f, .0f, .0f};
     FusionAhrs ahrs;
+
+    VL53L0X_Dev_t vl53l0x_c; // center module
+    VL53L0X_DEV Dev = &vl53l0x_c;
+
+    float altitude = 0.0f;
+    float radar_altitude = 0.0f;
 };
 
 #endif //DRONEFIRMWARE_AHRS_H

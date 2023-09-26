@@ -49,6 +49,7 @@ void DroneModel::update(float dt) {
 
     sensor_mock.acceleration = acceleration;
     sensor_mock.angular_acceleration = angular_acceleration;
+    sensor_mock.altitude = position.z;
 
     controller.update(dt);
 }

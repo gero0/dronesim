@@ -3,6 +3,7 @@
 //
 
 #include <cmath>
+#include <vl53l0x_platform.h>
 #include "AHRS.h"
 
 #define GYRO_FSR 1000
@@ -15,10 +16,11 @@ extern "C" {
 #include "mpu_interface.h"
 #include "mpu_helpers.h"
 #include "qmc5883l.h"
+#include "main.h"
 
 constexpr int AHRS_SAMPLE_RATE = 500;
 
-bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c) {
+bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c) {
     mpu_interface_register(mpu_i2c);
     struct int_param_s int_param;
     int result = mpu_init(&int_param);
@@ -43,6 +45,23 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c)
 
     FusionAhrsInitialise(&ahrs);
     FusionAhrsSetSettings(&ahrs, &settings);
+
+    uint8_t VhvSettings;
+    uint8_t PhaseCal;
+    uint32_t refSpadCount;
+    uint8_t isApertureSpads;
+
+    Dev->I2cDevAddr = 0x52;
+    Dev->I2cHandle = vl5_i2c;
+
+    VL53L0X_WaitDeviceBooted(Dev);
+    VL53L0X_DataInit(Dev);
+    VL53L0X_StaticInit(Dev);
+    VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
+    VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
+    VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+
+    VL53L0X_StartMeasurement(Dev);
 
     initialized = true;
 
@@ -102,13 +121,23 @@ void AHRS::sensor_update() {
 
     if (qmc_data_ready()) {
         magnetometer = {static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
-                       static_cast<float>(qmc_get_z())};
+                        static_cast<float>(qmc_get_z())};
     }
 
     FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
-    rotation_current = {(float)(euler.angle.pitch / 180.0f * M_PI), (float)(euler.angle.yaw / 180.0f * M_PI), (float)(euler.angle.roll / 180.0f * M_PI)};
+    rotation_current = {(float) (euler.angle.pitch / 180.0f * M_PI), (float) (euler.angle.yaw / 180.0f * M_PI),
+                        (float) (euler.angle.roll / 180.0f * M_PI)};
+
+    VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+    uint8_t vl5_dataready = 0;
+    VL53L0X_GetMeasurementDataReady(Dev, &vl5_dataready);
+    if (vl5_dataready == 0x01) {
+        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
+        VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
+    }
 }
 
 Rotation AHRS::get_rotation() {
@@ -128,4 +157,13 @@ Vector3 AHRS::get_acceleration() {
 
 void AHRS::update(float dt) {
 
+}
+
+
+float AHRS::get_altitude() {
+    return altitude;
+}
+
+float AHRS::get_radar_altitude() {
+    return radar_altitude;
 }

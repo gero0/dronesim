@@ -15,7 +15,8 @@ void DroneController::update(float dt) {
     velocity_global += acceleration * dt;
     position_global += velocity_global * dt;
 
-    altitude = position_global.z;
+    altitude = sensor_reader->get_altitude();
+    radar_altitude = sensor_reader->get_radar_altitude();
 
     if (position_global.z <= 0) {
         velocity_global.z = 0;
