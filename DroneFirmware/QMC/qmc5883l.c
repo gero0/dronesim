@@ -5,7 +5,7 @@
 #include "qmc5883l.h"
 #include "main.h"
 
-I2C_HandleTypeDef *i2c = NULL;
+static I2C_HandleTypeDef *i2c = NULL;
 
 void qmc_write_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     if (!i2c) {
