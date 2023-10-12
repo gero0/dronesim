@@ -57,6 +57,8 @@ add_executable(
         Core/Src/AHRS.cpp
         Core/Src/vl53l0x_platform.c
         Core/Src/vl53l0x_platform_log.c
+        Core/Src/bme_interface.c
+        Core/Inc/bme_interface.h
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
         QMC/qmc5883l.c
@@ -91,7 +93,7 @@ add_executable(
         FreeRTOS/Source/tasks.c
         FreeRTOS/Source/timers.c
         FreeRTOS/Source/portable/MemMang/heap_4.c
-        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c Core/Src/bme_interface.c Core/Inc/bme_interface.h)
+        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c)
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)

@@ -11,14 +11,14 @@ void qmc_write_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     if (!i2c) {
         return;
     }
-    HAL_I2C_Mem_Write(i2c, (QMC_ADDR << 1), memaddr, 1, data, length, HAL_MAX_DELAY);
+    HAL_I2C_Mem_Write(i2c, (QMC_ADDR << 1), memaddr, 1, data, length, 2);
 }
 
 void qmc_read_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     if (!i2c) {
         return;
     }
-    HAL_I2C_Mem_Read(i2c, (QMC_ADDR << 1) | 1, memaddr, 1, data, length, HAL_MAX_DELAY);
+    HAL_I2C_Mem_Read(i2c, (QMC_ADDR << 1) | 1, memaddr, 1, data, length, 2);
 }
 
 void qmc_delay_ms(uint16_t ms){

@@ -22,6 +22,7 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "FreeRTOS.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern I2C_HandleTypeDef hi2c1;
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern SPI_HandleTypeDef hspi1;
@@ -148,10 +150,10 @@ void UsageFault_Handler(void)
 //void SVC_Handler(void)
 //{
 //  /* USER CODE BEGIN SVCall_IRQn 0 */
-//////////
+////////////
 //  /* USER CODE END SVCall_IRQn 0 */
 //  /* USER CODE BEGIN SVCall_IRQn 1 */
-//////////
+////////////
 //  /* USER CODE END SVCall_IRQn 1 */
 //}
 
@@ -174,26 +176,26 @@ void DebugMon_Handler(void)
 //void PendSV_Handler(void)
 //{
 //  /* USER CODE BEGIN PendSV_IRQn 0 */
-//////////
+////////////
 //  /* USER CODE END PendSV_IRQn 0 */
 //  /* USER CODE BEGIN PendSV_IRQn 1 */
-//////////
+////////////
 //  /* USER CODE END PendSV_IRQn 1 */
 //}
 
 /**
   * @brief This function handles System tick timer.
   */
-//void SysTick_Handler(void)
-//{
-//  /* USER CODE BEGIN SysTick_IRQn 0 */
-//////////
-//  /* USER CODE END SysTick_IRQn 0 */
-//  HAL_IncTick();
-//  /* USER CODE BEGIN SysTick_IRQn 1 */
-//////////
-//  /* USER CODE END SysTick_IRQn 1 */
-//}
+void SysTick_Handler(void)
+{
+    /* USER CODE BEGIN SysTick_IRQn 0 */
+
+    /* USER CODE END SysTick_IRQn 0 */
+    HAL_IncTick();
+    /* USER CODE BEGIN SysTick_IRQn 1 */
+    xPortSysTickHandler();
+    /* USER CODE END SysTick_IRQn 1 */
+}
 
 /******************************************************************************/
 /* STM32H7xx Peripheral Interrupt Handlers                                    */
@@ -242,6 +244,34 @@ void TIM3_IRQHandler(void)
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 event interrupt.
+  */
+void I2C1_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_EV_IRQn 0 */
+
+  /* USER CODE END I2C1_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c1);
+  /* USER CODE BEGIN I2C1_EV_IRQn 1 */
+
+  /* USER CODE END I2C1_EV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 error interrupt.
+  */
+void I2C1_ER_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_ER_IRQn 0 */
+
+  /* USER CODE END I2C1_ER_IRQn 0 */
+  HAL_I2C_ER_IRQHandler(&hi2c1);
+  /* USER CODE BEGIN I2C1_ER_IRQn 1 */
+
+  /* USER CODE END I2C1_ER_IRQn 1 */
 }
 
 /**

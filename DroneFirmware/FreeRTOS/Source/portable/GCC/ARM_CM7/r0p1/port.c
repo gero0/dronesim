@@ -33,6 +33,7 @@
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "stm32h7xx_hal.h"
 
 #ifndef __VFP_FP__
     #error This port can only be used when the project options are configured to enable hardware floating point support.
