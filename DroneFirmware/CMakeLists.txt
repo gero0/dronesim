@@ -60,6 +60,7 @@ add_executable(
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
         QMC/qmc5883l.c
+        ../BME280_driver/bme280.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
@@ -90,7 +91,7 @@ add_executable(
         FreeRTOS/Source/tasks.c
         FreeRTOS/Source/timers.c
         FreeRTOS/Source/portable/MemMang/heap_4.c
-        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c)
+        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c Core/Src/bme_interface.c Core/Inc/bme_interface.h)
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
@@ -114,7 +115,9 @@ target_include_directories(
         ../DroneController/src
         ../Message/Inc
         ../Fusion/Fusion
-        ../VL53L0X/core/inc)
+        ../VL53L0X/core/inc
+        ../BME280_driver
+)
 
 # add_compile_options(-Os)
 

@@ -10,10 +10,12 @@
 #include "SensorReader.h"
 #include <Fusion.h>
 #include "vl53l0x_api.h"
+#include "bme280.h"
 
 class AHRS : public SensorReader {
 public:
-    bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c);
+    bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
+                       I2C_HandleTypeDef *vl5_i2c, I2C_HandleTypeDef *bme_i2c);
 
     bool calibrate() const;
 
@@ -52,6 +54,10 @@ private:
 
     VL53L0X_Dev_t vl53l0x_c; // center module
     VL53L0X_DEV Dev = &vl53l0x_c;
+
+    uint32_t bme_period = 0;
+    bme280_dev bme_dev;
+    bme280_settings bme_settings;
 
     float altitude = 0.0f;
     float radar_altitude = 0.0f;

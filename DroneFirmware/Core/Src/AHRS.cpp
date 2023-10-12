@@ -17,14 +17,16 @@ extern "C" {
 #include "mpu_helpers.h"
 #include "qmc5883l.h"
 #include "main.h"
+#include "bme_interface.h"
 
 constexpr int AHRS_SAMPLE_RATE = 500;
 
-bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c) {
+bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c,
+                         I2C_HandleTypeDef *bme_i2c) {
     mpu_interface_register(mpu_i2c);
     struct int_param_s int_param;
-    int result = mpu_init(&int_param);
-    if (result) {
+    bool result = (mpu_init(&int_param) == 0);
+    if (!result) {
         return false;
     }
     mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);
@@ -33,7 +35,10 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     mpu_set_gyro_fsr(GYRO_FSR);
     mpu_set_sample_rate(200);
 
-    qmc_init(qmc_i2c);
+    result = qmc_init(qmc_i2c);
+    if (!result) {
+        return false;
+    }
 
     const FusionAhrsSettings settings = {
             .convention = FusionConventionNwu,
@@ -62,6 +67,30 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
 
     VL53L0X_StartMeasurement(Dev);
+
+    int8_t rslt;
+    bme280_i2c_init(bme_i2c);
+
+    bme_dev.read = bme280_i2c_read;
+    bme_dev.write = bme280_i2c_write;
+    bme_dev.intf = BME280_I2C_INTF;
+    bme_dev.delay_us = bme280_delay_us;
+
+    rslt = bme280_init(&bme_dev);
+    result = (rslt == 0);
+    if (!result) {
+        return false;
+    }
+
+    bme280_get_sensor_settings(&bme_settings, &bme_dev);
+    bme_settings.filter = BME280_FILTER_COEFF_16;
+    bme_settings.osr_h = BME280_OVERSAMPLING_1X;
+    bme_settings.osr_p = BME280_OVERSAMPLING_4X;
+    bme_settings.osr_t = BME280_OVERSAMPLING_1X;
+    bme_settings.standby_time = BME280_STANDBY_TIME_0_5_MS;
+    bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &bme_settings, &bme_dev);
+    bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme_dev);
+    bme280_cal_meas_delay(&bme_period, &bme_settings);
 
     initialized = true;
 
@@ -92,6 +121,25 @@ bool AHRS::calibrate() const {
     mpu_set_accel_bias_6050_reg(accel_bias);
 
     return true;
+}
+
+static bme280_data get_pressure(uint32_t period, struct bme280_dev *dev)
+{
+    int8_t rslt = BME280_E_NULL_PTR;
+    uint8_t status_reg;
+    bme280_data comp_data;
+
+    rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
+
+    if (status_reg & BME280_STATUS_MEAS_DONE)
+    {
+            /* Measurement time delay given to read sample */
+//            dev->delay_us(period, dev->intf_ptr);
+
+        rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
+    }
+
+    return comp_data;
 }
 
 void AHRS::sensor_update() {
@@ -138,6 +186,12 @@ void AHRS::sensor_update() {
         VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
         radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
     }
+
+    double pressure = get_pressure(bme_period, &bme_dev).pressure;
+    //international barometric formula
+    //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
+    double alt = 44330.0 * (1 - std::pow((pressure/101325),(1/5.255)) );
+    altitude = static_cast<float>(alt);
 }
 
 Rotation AHRS::get_rotation() {
