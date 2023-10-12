@@ -142,7 +142,31 @@ static bme280_data get_pressure(uint32_t period, struct bme280_dev *dev)
     return comp_data;
 }
 
-void AHRS::sensor_update() {
+void AHRS::madgwick_update() {
+    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
+    const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+
+    rotation_current = {(float) (euler.angle.pitch / 180.0f * M_PI), (float) (euler.angle.yaw / 180.0f * M_PI),
+                        (float) (euler.angle.roll / 180.0f * M_PI)};
+}
+
+Rotation AHRS::get_rotation() {
+    return rotation_current;
+}
+
+Vector3 AHRS::get_acceleration() {
+    auto [x, y, z] = acceleration_current;
+    const float threshold = 0.1;
+    x = abs(x) > threshold ? x : 0;
+    y = abs(y) > threshold ? y : 0;
+    z = abs(z) > threshold ? z : 0;
+//    Vector3 acc_global = body_to_earth({x,y,z}, rotation_current);
+    return {x, y, z};
+//    return acc_global;
+}
+
+void AHRS::update(float dt) {
+    //TODO: data ready check
     if (!initialized) {
         return;
     }
@@ -164,19 +188,17 @@ void AHRS::sensor_update() {
     mpu_get_gyro_reg(gyro_raw, nullptr);
     gyro_to_dps(gyro_raw, (float *) gyro_dps, GYRO_FSR);
 
+    __disable_irq();
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
+    __enable_irq();
 
     if (qmc_data_ready()) {
+        __disable_irq();
         magnetometer = {static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
                         static_cast<float>(qmc_get_z())};
+        __enable_irq();
     }
-
-    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
-    const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
-
-    rotation_current = {(float) (euler.angle.pitch / 180.0f * M_PI), (float) (euler.angle.yaw / 180.0f * M_PI),
-                        (float) (euler.angle.roll / 180.0f * M_PI)};
 
     VL53L0X_RangingMeasurementData_t RangingMeasurementData;
     uint8_t vl5_dataready = 0;
@@ -192,25 +214,6 @@ void AHRS::sensor_update() {
     //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
     double alt = 44330.0 * (1 - std::pow((pressure/101325),(1/5.255)) );
     altitude = static_cast<float>(alt);
-}
-
-Rotation AHRS::get_rotation() {
-    return rotation_current;
-}
-
-Vector3 AHRS::get_acceleration() {
-    auto [x, y, z] = acceleration_current;
-    const float threshold = 0.1;
-    x = abs(x) > threshold ? x : 0;
-    y = abs(y) > threshold ? y : 0;
-    z = abs(z) > threshold ? z : 0;
-//    Vector3 acc_global = body_to_earth({x,y,z}, rotation_current);
-    return {x, y, z};
-//    return acc_global;
-}
-
-void AHRS::update(float dt) {
-
 }
 
 

@@ -131,7 +131,7 @@ int _write(int file, char *ptr, int len) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     // Check which version of the timer triggered this callback and toggle LED
     if (htim == &htim3) {
-        ahrs.sensor_update();
+        ahrs.madgwick_update();
         HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
     }
 }

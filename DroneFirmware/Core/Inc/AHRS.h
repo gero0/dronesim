@@ -19,7 +19,7 @@ public:
 
     bool calibrate() const;
 
-    void sensor_update();
+    void madgwick_update();
 
     Rotation get_rotation() override;
 
