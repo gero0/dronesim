@@ -166,7 +166,7 @@ const uint8_t APBPrescTable[8U] =  {0, 0, 0, 0, 1, 2, 3, 4};
 
 /**
   * @brief  Setup the microcontroller system
-  *         Initialize the Embedded Flash Interface, the PLL and update the 
+  *         Initialize the Embedded Flash Interface, the PLL and db_update the
   *         SystemCoreClock variable.
   * @note   This function should be used only after reset.
   * @param  None
@@ -193,7 +193,7 @@ void SystemInit (void)
   *         other parameters.
   *           
   * @note   Each time the core clock (HCLK) changes, this function must be called
-  *         to update SystemCoreClock variable value. Otherwise, any configuration
+  *         to db_update SystemCoreClock variable value. Otherwise, any configuration
   *         based on this variable will be incorrect.         
   *     
   * @note   - The system frequency computed by this function is not the real 

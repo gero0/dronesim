@@ -40,36 +40,29 @@ add_executable(EXEC
         NRF/nRF24.c
         Core/Src/main.c
         Core/Src/queue.c
+        Core/Src/lcd.c
+        Core/Src/debouncer.c
         Core/Src/stm32f1xx_it.c
         Core/Src/stm32f1xx_hal_msp.c
-        USB_DEVICE/Target/usbd_conf.c
-        USB_DEVICE/App/usb_device.c
-        USB_DEVICE/App/usbd_cdc_if.c
-        USB_DEVICE/App/usbd_desc.c
-        Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c
-        Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c
-        Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
-        Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_cortex.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_dma.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_exti.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pcd.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pcd_ex.c
-        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_ll_usb.c
-        Core/Src/system_stm32f1xx.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc_ex.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c
+        Core/Src/system_stm32f1xx.c
         startup_stm32f103xb.s
-        )
+        Core/Src/debouncer.c Core/Inc/debouncer.h)
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F103C8Tx_FLASH.ld)
 

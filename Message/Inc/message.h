@@ -1,3 +1,6 @@
+#ifndef MESSAGE_MESSAGE_H
+#define MESSAGE_MESSAGE_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -27,3 +30,5 @@ void serialize_msg(uint8_t *buffer, const Message *msg);
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+#endif // MESSAGE_MESSAGE_H
