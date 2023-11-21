@@ -188,16 +188,12 @@ void AHRS::update(float dt) {
     mpu_get_gyro_reg(gyro_raw, nullptr);
     gyro_to_dps(gyro_raw, (float *) gyro_dps, GYRO_FSR);
 
-    __disable_irq();
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
-    __enable_irq();
 
     if (qmc_data_ready()) {
-        __disable_irq();
         magnetometer = {static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
                         static_cast<float>(qmc_get_z())};
-        __enable_irq();
     }
 
     VL53L0X_RangingMeasurementData_t RangingMeasurementData;

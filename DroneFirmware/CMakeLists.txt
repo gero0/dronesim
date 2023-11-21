@@ -63,6 +63,8 @@ add_executable(
         NRF/nRF24.c
         QMC/qmc5883l.c
         ../BME280_driver/bme280.c
+        GYNEO/gyneo_gps_driver.c
+        ../minmea/minmea.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
         Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
@@ -93,7 +95,7 @@ add_executable(
         FreeRTOS/Source/tasks.c
         FreeRTOS/Source/timers.c
         FreeRTOS/Source/portable/MemMang/heap_4.c
-        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c)
+        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c Core/Src/comm_manager.cpp Core/Inc/comm_manager.h)
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
@@ -114,6 +116,8 @@ target_include_directories(
         FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
         NRF
         QMC
+        GYNEO
+        ../minmea
         ../DroneController/src
         ../Message/Inc
         ../Fusion/Fusion
