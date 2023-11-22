@@ -9,7 +9,7 @@ extern "C"{
 #define DRONEFIRMWARE_QMC5883L_H
 
 #include <stdbool.h>
-#include "stm32h7xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 #define QMC_ADDR 0x0D
 

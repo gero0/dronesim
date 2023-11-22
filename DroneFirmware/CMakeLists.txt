@@ -17,15 +17,20 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 project(DroneFirmware LANGUAGES C CXX ASM)
 
-add_definitions(-DUSE_HAL_DRIVER -DSTM32H743xx -DMPU6050 -DREMOVE_LOGGING
-        -DMPL_LOG_NDEBUG=1)
+add_definitions(
+    -DUSE_HAL_DRIVER
+    -DSTM32F411xE
+    -DMPU6050
+    -DREMOVE_LOGGING
+    -DMPL_LOG_NDEBUG=1
+)
 
 add_link_options(
         -L${CMAKE_SOURCE_DIR}/MPU
         -Wl,-gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map
         -T
-        ${CMAKE_SOURCE_DIR}/STM32H743ZITx_FLASH.ld
-        -mcpu=cortex-m7
+        ${CMAKE_SOURCE_DIR}/STM32F411CEUx_FLASH.ld
+        -mcpu=cortex-m4
         -mthumb
         -mthumb-interwork
         -u
@@ -36,7 +41,7 @@ add_link_options(
 add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
 add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
-add_compile_options(-mcpu=cortex-m7 -mthumb -mthumb-interwork)
+add_compile_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_compile_options(-ffunction-sections -fdata-sections -fno-common
         -fmessage-length=0)
 
@@ -47,55 +52,59 @@ add_subdirectory(../VL53L0X VL5)
 
 add_executable(
         EXEC
-        Core/Src/main.cpp
-        startup_stm32h743xx.s
-        Core/Src/stm32h7xx_it.c
-        Core/Src/stm32h7xx_hal_msp.c
-        Core/Src/system_stm32h7xx.c
-        Core/Src/mpu_interface.c
-        Core/Src/mpu_helpers.c
-        Core/Src/AHRS.cpp
-        Core/Src/vl53l0x_platform.c
-        Core/Src/vl53l0x_platform_log.c
-        Core/Src/bme_interface.c
-        Core/Inc/bme_interface.h
+        Src/main.cpp
+        startup_stm32f411xe.s
+        Src/stm32f4xx_it.c
+        Src/stm32f4xx_hal_msp.c
+        Src/stm32f4xx_hal_timebase_tim.c
+        Src/system_stm32f4xx.c
+        Src/mpu_interface.c
+        Src/mpu_helpers.c
+        Src/AHRS.cpp
+        Src/vl53l0x_platform.c
+        Src/vl53l0x_platform_log.c
+        Src/bme_interface.c
+        Src/comm_manager.cpp
+        Src/freertos.c
         MPU/driver/eMPL/inv_mpu.c
         NRF/nRF24.c
         QMC/qmc5883l.c
         ../BME280_driver/bme280.c
         GYNEO/gyneo_gps_driver.c
         ../minmea/minmea.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
-        Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
-        FreeRTOS/Source/croutine.c
-        FreeRTOS/Source/event_groups.c
-        FreeRTOS/Source/list.c
-        FreeRTOS/Source/queue.c
-        FreeRTOS/Source/stream_buffer.c
-        FreeRTOS/Source/tasks.c
-        FreeRTOS/Source/timers.c
-        FreeRTOS/Source/portable/MemMang/heap_4.c
-        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c Core/Src/comm_manager.cpp Core/Inc/comm_manager.h)
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
+        Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c
+        Middlewares/Third_Party/FreeRTOS/Source/croutine.c
+        Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
+        Middlewares/Third_Party/FreeRTOS/Source/list.c
+        Middlewares/Third_Party/FreeRTOS/Source/queue.c
+        Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
+        Middlewares/Third_Party/FreeRTOS/Source/tasks.c
+        Middlewares/Third_Party/FreeRTOS/Source/timers.c
+        Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+        Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+        Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
+        )
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
@@ -105,15 +114,17 @@ target_link_libraries(EXEC PRIVATE -lc -lm -lnosys -llibmplmpu
 
 target_include_directories(
         EXEC
-        PRIVATE Core/Inc
-        Drivers/STM32H7xx_HAL_Driver/Inc
-        Drivers/STM32H7xx_HAL_Driver/Inc/Legacy
-        Drivers/CMSIS/Device/ST/STM32H7xx/Include
+        PRIVATE 
+        Inc
+        Drivers/STM32F4xx_HAL_Driver/Inc
+        Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
+        Drivers/CMSIS/Device/ST/STM32F4xx/Include
         Drivers/CMSIS/Include
         MPU/driver/include
         MPU/driver/eMPL
-        FreeRTOS/Source/include
-        FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1
+        Middlewares/Third_Party/FreeRTOS/Source/include
+        Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+        Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
         NRF
         QMC
         GYNEO
@@ -145,3 +156,4 @@ add_custom_command(
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:EXEC> ${BIN_FILE}
         COMMENT "Building ${HEX_FILE}
 Building ${BIN_FILE}")
+ 
