@@ -26,13 +26,11 @@
 #include <semphr.h>
 #include "task.h"
 #include <cstdio>
-#include <memory.h>
 #include <AHRS.h>
 #include "MotorDriverMock.h"
 #include "DroneController.h"
 #include "FreeRTOSConfig.h"
 #include "message.h"
-#include "qmc5883l.h"
 #include "gyneo_gps_driver.h"
 #include "comm_manager.h"
 /* USER CODE END Includes */
@@ -151,6 +149,8 @@ int _write(int file, char *ptr, int len) {
     //TODO: activate sound signal
     while(true){
         HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
         rtos_delay(1000);
     }
 }
@@ -177,8 +177,8 @@ int _write(int file, char *ptr, int len) {
     while (true) {
         vTaskDelay(1 / portTICK_RATE_MS);
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        uint32_t now = xTaskGetTickCount();
-        float dt = (float) (now - prev_time) / 1000.0f;
+        const uint32_t now = xTaskGetTickCount();
+        const float dt = static_cast<float>(now - prev_time) / 1000.0f;
         xSemaphoreTake(controller_mutex, portMAX_DELAY);
         controller.update(dt);
         prev_time = now;
@@ -727,10 +727,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(NRF_CSN_GPIO_Port, NRF_CSN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, NRF_CE_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, NRF24_CE_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LD1_Pin */
   GPIO_InitStruct.Pin = LD1_Pin;
@@ -745,23 +745,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_BTN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : NRF_CSN_Pin */
-  GPIO_InitStruct.Pin = NRF_CSN_Pin;
+  /*Configure GPIO pin : NRF24_CSN_Pin */
+  GPIO_InitStruct.Pin = NRF24_CSN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(NRF_CSN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(NRF24_CSN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF_CE_Pin LD3_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = NRF_CE_Pin|LD3_Pin|LD2_Pin;
+  /*Configure GPIO pins : NRF24_CE_Pin LD3_Pin LD2_Pin */
+  GPIO_InitStruct.Pin = NRF24_CE_Pin|LD3_Pin|LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin BMP_IRQ_Pin
+  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin BMP_IRQ_Pin
                            VL5_IRQ_Pin */
-  GPIO_InitStruct.Pin = NRF_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|BMP_IRQ_Pin
+  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|BMP_IRQ_Pin
                           |VL5_IRQ_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -810,11 +810,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM2) {
     HAL_IncTick();
-  } else if (htim == &htim10) {
-    ahrs.madgwick_update();
   }
   /* USER CODE BEGIN Callback 1 */
-
+  else if (htim == &htim10) {
+    ahrs.madgwick_update();
+  }
   /* USER CODE END Callback 1 */
 }
 

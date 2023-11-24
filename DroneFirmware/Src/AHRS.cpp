@@ -16,17 +16,29 @@ extern "C" {
 #include "mpu_interface.h"
 #include "mpu_helpers.h"
 #include "qmc5883l.h"
-#include "main.h"
 #include "bme_interface.h"
 
 constexpr int AHRS_SAMPLE_RATE = 500;
 
-bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c,
-                         I2C_HandleTypeDef *bme_i2c) {
+bool AHRS::init_hardware(I2C_HandleTypeDef* mpu_i2c, I2C_HandleTypeDef* qmc_i2c, I2C_HandleTypeDef* vl5_i2c,
+                         I2C_HandleTypeDef* bme_i2c) {
+    bool result = init_mpu(mpu_i2c);
+    result &= qmc_init(qmc_i2c);
+
+    init_fusion();
+    init_vl5(vl5_i2c);
+
+    result &= init_bme(bme_i2c);
+
+    initialized = result;
+
+    return initialized;
+}
+
+bool AHRS::init_mpu(I2C_HandleTypeDef* mpu_i2c) {
     mpu_interface_register(mpu_i2c);
-    struct int_param_s int_param;
-    bool result = (mpu_init(&int_param) == 0);
-    if (!result) {
+    int_param_s int_param;
+    if (const bool result = mpu_init(&int_param) == 0; !result) {
         return false;
     }
     mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);
@@ -35,22 +47,23 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     mpu_set_gyro_fsr(GYRO_FSR);
     mpu_set_sample_rate(200);
 
-    result = qmc_init(qmc_i2c);
-    if (!result) {
-        return false;
-    }
+    return true;
+}
 
-    const FusionAhrsSettings settings = {
-            .convention = FusionConventionNwu,
-            .gain = 0.5f,
-            .accelerationRejection = 10.0f,
-            .magneticRejection = 10.0f,
-            .recoveryTriggerPeriod = 5 * AHRS_SAMPLE_RATE, /* 5 seconds */
+void AHRS::init_fusion() {
+    constexpr FusionAhrsSettings settings = {
+        .convention = FusionConventionNwu,
+        .gain = 0.5f,
+        .accelerationRejection = 10.0f,
+        .magneticRejection = 10.0f,
+        .recoveryTriggerPeriod = 5 * AHRS_SAMPLE_RATE, /* 5 seconds */
     };
 
     FusionAhrsInitialise(&ahrs);
     FusionAhrsSetSettings(&ahrs, &settings);
+}
 
+void AHRS::init_vl5(I2C_HandleTypeDef* vl5_i2c) const {
     uint8_t VhvSettings;
     uint8_t PhaseCal;
     uint32_t refSpadCount;
@@ -67,8 +80,9 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
 
     VL53L0X_StartMeasurement(Dev);
+}
 
-    int8_t rslt;
+bool AHRS::init_bme(I2C_HandleTypeDef* bme_i2c) {
     bme280_i2c_init(bme_i2c);
 
     bme_dev.read = bme280_i2c_read;
@@ -76,9 +90,8 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     bme_dev.intf = BME280_I2C_INTF;
     bme_dev.delay_us = bme280_delay_us;
 
-    rslt = bme280_init(&bme_dev);
-    result = (rslt == 0);
-    if (!result) {
+    const int8_t rslt = bme280_init(&bme_dev);
+    if (const bool result = rslt == 0; !result) {
         return false;
     }
 
@@ -92,29 +105,25 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme_dev);
     bme280_cal_meas_delay(&bme_period, &bme_settings);
 
-    initialized = true;
-
     return true;
 }
 
-
-bool AHRS::calibrate() const {
+bool AHRS::calibrate() {
     if (!initialized) {
         return false;
     }
     long accel_bias[3];
     long gyro_bias[3];
-    int result = mpu_run_self_test(gyro_bias, accel_bias);
 
-    if (result != 0x7) {
+    if (const int result = mpu_run_self_test(gyro_bias, accel_bias); result != 0x7) {
         return false;
     }
 
     for (int i = 0; i < 3; i++) {
-        gyro_bias[i] = (long) ((float) gyro_bias[i] * 32.8f); //convert to +-1000dps
+        gyro_bias[i] = static_cast<long>(static_cast<float>(gyro_bias[i]) * 32.8f); //convert to +-1000dps
         accel_bias[i] *= 2048.f; //convert to +-16G
         accel_bias[i] = accel_bias[i] >> 16;
-        gyro_bias[i] = (long) (gyro_bias[i] >> 16);
+        gyro_bias[i] = gyro_bias[i] >> 16;
     }
 
     mpu_set_gyro_bias_reg(gyro_bias);
@@ -123,18 +132,15 @@ bool AHRS::calibrate() const {
     return true;
 }
 
-static bme280_data get_pressure(uint32_t period, struct bme280_dev *dev)
-{
-    int8_t rslt = BME280_E_NULL_PTR;
+bme280_data AHRS::get_pressure(uint32_t period, bme280_dev* dev) {
     uint8_t status_reg;
-    bme280_data comp_data;
+    bme280_data comp_data{};
 
-    rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
+    int8_t rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
 
-    if (status_reg & BME280_STATUS_MEAS_DONE)
-    {
-            /* Measurement time delay given to read sample */
-//            dev->delay_us(period, dev->intf_ptr);
+    if (status_reg & BME280_STATUS_MEAS_DONE) {
+        /* Measurement time delay given to read sample */
+        //            dev->delay_us(period, dev->intf_ptr);
 
         rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
     }
@@ -146,8 +152,10 @@ void AHRS::madgwick_update() {
     FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
-    rotation_current = {(float) (euler.angle.pitch / 180.0f * M_PI), (float) (euler.angle.yaw / 180.0f * M_PI),
-                        (float) (euler.angle.roll / 180.0f * M_PI)};
+    rotation_current = {
+        static_cast<float>(euler.angle.pitch / 180.0f * M_PI), static_cast<float>(euler.angle.yaw / 180.0f * M_PI),
+        static_cast<float>(euler.angle.roll / 180.0f * M_PI)
+    };
 }
 
 Rotation AHRS::get_rotation() {
@@ -156,13 +164,13 @@ Rotation AHRS::get_rotation() {
 
 Vector3 AHRS::get_acceleration() {
     auto [x, y, z] = acceleration_current;
-    const float threshold = 0.1;
+    constexpr float threshold = 0.1;
     x = abs(x) > threshold ? x : 0;
     y = abs(y) > threshold ? y : 0;
     z = abs(z) > threshold ? z : 0;
-//    Vector3 acc_global = body_to_earth({x,y,z}, rotation_current);
+    //    Vector3 acc_global = body_to_earth({x,y,z}, rotation_current);
     return {x, y, z};
-//    return acc_global;
+    //    return acc_global;
 }
 
 void AHRS::update(float dt) {
@@ -175,25 +183,27 @@ void AHRS::update(float dt) {
     float accel_gs[3];
 
     mpu_get_accel_reg(accel_raw, nullptr);
-    accel_to_gs(accel_raw, (float *) accel_gs, ACC_FSR);
+    accel_to_gs(accel_raw, accel_gs, ACC_FSR);
 
-//    acc_samples[acc_i] = {accel_gs[1], accel_gs[0], -accel_gs[2]};
-//    acc_i = (acc_i + 1) % averaging_len;
-//    acceleration_current = {0, 0, 0};
-//    for (auto acc_sample: acc_samples) {
-//        acceleration_current += acc_sample;
-//    }
-//    acceleration_current /= averaging_len;
+    //    acc_samples[acc_i] = {accel_gs[1], accel_gs[0], -accel_gs[2]};
+    //    acc_i = (acc_i + 1) % averaging_len;
+    //    acceleration_current = {0, 0, 0};
+    //    for (auto acc_sample: acc_samples) {
+    //        acceleration_current += acc_sample;
+    //    }
+    //    acceleration_current /= averaging_len;
 
     mpu_get_gyro_reg(gyro_raw, nullptr);
-    gyro_to_dps(gyro_raw, (float *) gyro_dps, GYRO_FSR);
+    gyro_to_dps(gyro_raw, const_cast<float *>(gyro_dps), GYRO_FSR);
 
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
 
     if (qmc_data_ready()) {
-        magnetometer = {static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
-                        static_cast<float>(qmc_get_z())};
+        magnetometer = {
+            static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
+            static_cast<float>(qmc_get_z())
+        };
     }
 
     VL53L0X_RangingMeasurementData_t RangingMeasurementData;
@@ -205,11 +215,20 @@ void AHRS::update(float dt) {
         radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
     }
 
-    double pressure = get_pressure(bme_period, &bme_dev).pressure;
+
+    const double pressure = get_pressure(bme_period, &bme_dev).pressure;
     //international barometric formula
     //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
-    double alt = 44330.0 * (1 - std::pow((pressure/101325),(1/5.255)) );
-    altitude = static_cast<float>(alt);
+    const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
+    if(alt > 0.0f && alt < 10000.0f) {
+        abs_altitude = static_cast<float>(alt);
+        if(radar_altitude < 0.8f) {
+            altitude = radar_altitude;
+            base_altitude = abs_altitude - altitude;
+        }else {
+            altitude = abs_altitude - base_altitude;
+        }
+    }
 }
 
 
@@ -219,4 +238,8 @@ float AHRS::get_altitude() {
 
 float AHRS::get_radar_altitude() {
     return radar_altitude;
+}
+
+float AHRS::get_absolute_altitude() {
+    return abs_altitude;
 }

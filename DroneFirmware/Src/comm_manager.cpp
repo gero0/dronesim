@@ -143,10 +143,12 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 float alt = controller->get_altitude();
                 float radar = controller->get_radar_altitude();
+                float abs = controller->get_absolute_altitude();
                 xSemaphoreGive(controller_mutex);
                 output_msg->type = GetAltitude;
                 memcpy(output_msg->data, &alt, sizeof(float));
                 memcpy(output_msg->data + sizeof(float), &radar, sizeof(float));
+                memcpy(output_msg->data + 2 * sizeof(float), &abs, sizeof(float));
                 return CommState::Send;
             }
             case GetStatus: {
@@ -163,9 +165,9 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
             }
         }
     }
-    if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
-        return CommState::ConnLost;
-    }
+    // if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
+    //     return CommState::ConnLost;
+    // }
     return CommState::Listen;
 }
 

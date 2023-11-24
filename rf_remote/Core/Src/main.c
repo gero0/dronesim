@@ -84,6 +84,7 @@ MessageType last_msg_type = 0;
 
 float press_altitude = 0.0f;
 float radar_altitude = 0.0f;
+float abs_altitude = 0.0f;
 
 //pitch, yaw, roll
 float angles[3] = {0};
@@ -174,7 +175,7 @@ void display_draw_motors(char line_1[], char line_2[]){
 }
 
 void display_draw_altitude(char line_1[], char line_2[]){
-    sprintf(line_1, "R:%0.1f A:%0.1f", press_altitude, press_altitude);
+    sprintf(line_1, "R:%0.1f A:%0.1f", press_altitude, abs_altitude);
     sprintf(line_2, "RDR:%0.2f", radar_altitude);
 }
 
@@ -212,6 +213,7 @@ void update_values(Message msg) {
         case GetAltitude:
             memcpy(&press_altitude, msg.data, sizeof(float));
             memcpy(&radar_altitude, &msg.data[sizeof(float)], sizeof(float));
+            memcpy(&abs_altitude, &msg.data[2*sizeof(float)], sizeof(float));
             break;
         case GetAngles:
             memcpy(angles, msg.data, sizeof(float) * 3);

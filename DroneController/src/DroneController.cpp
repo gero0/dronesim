@@ -16,6 +16,7 @@ void DroneController::update(float dt) {
     position_global += velocity_global * dt;
 
     altitude = sensor_reader->get_altitude();
+    absolute_altitude = sensor_reader->get_absolute_altitude();
     radar_altitude = sensor_reader->get_radar_altitude();
 
     if (position_global.z <= 0) {
@@ -154,6 +155,10 @@ float DroneController::get_altitude() {
 
 float DroneController::get_radar_altitude() {
     return radar_altitude;
+}
+
+float DroneController::get_absolute_altitude() {
+    return absolute_altitude;
 }
 
 std::array<float, 4> DroneController::get_motor_speeds() {

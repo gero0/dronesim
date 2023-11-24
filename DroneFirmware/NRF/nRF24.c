@@ -13,10 +13,6 @@
 #include "nRF24_Defs.h"
 
 #define NRF24_ADDR_SIZE	3
-#define NRF24_CSN_GPIO_Port GPIOC
-#define NRF24_CSN_Pin  GPIO_PIN_5
-#define NRF24_CE_GPIO_Port GPIOC
-#define NRF24_CE_Pin  GPIO_PIN_6
 
 bool spi_sent = false;
 bool spi_received = false;
@@ -28,8 +24,8 @@ static uint8_t addr_p0_backup[NRF24_ADDR_SIZE];
 static uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
 static volatile uint8_t Nrf24InterruptFlag;
 
-__attribute__((section(".dma_buffer"))) uint8_t tx_buffer[NRF24_PAYLOAD_SIZE];
-__attribute__((section(".dma_buffer"))) uint8_t rx_buffer[NRF24_PAYLOAD_SIZE];
+uint8_t tx_buffer[NRF24_PAYLOAD_SIZE];
+uint8_t rx_buffer[NRF24_PAYLOAD_SIZE];
 
 static void nRF24_Delay_ms(uint8_t Time) {
     rtos_delay(Time);

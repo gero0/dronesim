@@ -82,6 +82,8 @@ public:
 
     float get_radar_altitude();
 
+    float get_absolute_altitude();
+
     float get_altitude_setpoint() const;
 
     std::array<float, 4> get_motor_speeds();
@@ -101,6 +103,7 @@ private:
 
     float altitude = 0.0f;
     float radar_altitude = 0.0f;
+    float absolute_altitude = 0.0f;
     const float g = 9.81;
 
     const float max_angle = (45.0f / 180.0f) * M_PI;
