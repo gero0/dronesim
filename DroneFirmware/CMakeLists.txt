@@ -104,7 +104,8 @@ add_executable(
         Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
         Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
         Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
-        )
+        Src/BLDCController.cpp
+)
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)

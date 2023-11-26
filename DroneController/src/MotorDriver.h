@@ -7,6 +7,8 @@
 
 class MotorDriver{
 public:
+    virtual ~MotorDriver() = default;
+
     virtual void set_speed(float speed) = 0;
     virtual float get_speed() = 0;
 };
