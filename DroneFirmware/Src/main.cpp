@@ -155,6 +155,28 @@ int _write(int file, char *ptr, int len) {
     }
 }
 
+void init_motors() {
+  TIM1->CCR1 = 500;
+  TIM1->CCR2 = 500;
+  TIM1->CCR3 = 500;
+  TIM1->CCR4 = 500;
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+  vTaskDelay(500 / portTICK_RATE_MS);
+  TIM1->CCR1 = 1000;
+  TIM1->CCR2 = 1000;
+  TIM1->CCR3 = 1000;
+  TIM1->CCR4 = 1000;
+  vTaskDelay(500 / portTICK_RATE_MS);
+  TIM1->CCR1 = 500;
+  TIM1->CCR2 = 500;
+  TIM1->CCR3 = 500;
+  TIM1->CCR4 = 500;
+  vTaskDelay(1000 / portTICK_RATE_MS);
+}
+
 [[noreturn]] void ControlTask(void *pvParameters) {
     vTaskDelay(500 / portTICK_RATE_MS);
     bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
@@ -172,6 +194,8 @@ int _write(int file, char *ptr, int len) {
     HAL_UART_Receive_IT(&huart1, &uart_recv_byte, 1);
     //start updating madgwick filter in regular intervals
     HAL_TIM_Base_Start_IT(&htim10);
+
+    init_motors();
 
     uint32_t prev_time = xTaskGetTickCount();
     while (true) {
