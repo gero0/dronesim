@@ -90,6 +90,7 @@ BLDCController motors[4] = {
 DroneController controller(&motors[0], &motors[1], &motors[2], &motors[3], &ahrs);
 SemaphoreHandle_t controller_mutex;
 volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
+static bool kernel_started = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -150,7 +151,11 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
 
 
 void rtos_delay(uint32_t Time) {
-    vTaskDelay(Time / portTICK_RATE_MS);
+    if(kernel_started) {
+        vTaskDelay(Time / portTICK_RATE_MS);
+    }else {
+        HAL_Delay(Time);
+    }
 }
 
 int __io_putchar(int ch) {
@@ -317,6 +322,7 @@ int main(void) {
     xTaskCreate(CommTask, "CommTask", 300, NULL, 1, NULL);
     xTaskCreate(ControlTask, "ControlTask", 800, NULL, 2, NULL);
     xTaskCreate(statusPrintTask, "statusPrintTask", 800, NULL, 2, NULL);
+    kernel_started = true;
     vTaskStartScheduler();
 
     /* USER CODE END 2 */

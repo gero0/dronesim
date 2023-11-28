@@ -28,8 +28,9 @@ bool bme280_i2c_init(I2C_HandleTypeDef *hi2c) {
     return true;
 }
 
+//TODO: replace with timer based approach?
 void bme280_delay_us(long unsigned int us, void *intf_ptr) {
-    for (long unsigned int i = 0; i < us * 480; i++) {
+    for (long unsigned int i = 0; i < us * 100; i++) {
         __NOP();
     }
 }
