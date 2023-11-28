@@ -3,6 +3,9 @@
 //
 
 #include "qmc5883l.h"
+
+#include <i2c_helpers.h>
+
 #include "main.h"
 
 static I2C_HandleTypeDef *i2c = NULL;
@@ -11,14 +14,14 @@ void qmc_write_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     if (!i2c) {
         return;
     }
-    HAL_I2C_Mem_Write(i2c, (QMC_ADDR << 1), memaddr, 1, data, length, 2);
+    i2c_transmit_dma(i2c, (QMC_ADDR << 1), memaddr, 1, data, length);
 }
 
 void qmc_read_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     if (!i2c) {
         return;
     }
-    HAL_I2C_Mem_Read(i2c, (QMC_ADDR << 1) | 1, memaddr, 1, data, length, 2);
+    i2c_receive_dma(i2c, (QMC_ADDR << 1) | 1, memaddr, 1, data, length);
 }
 
 void qmc_delay_ms(uint16_t ms){

@@ -105,6 +105,7 @@ add_executable(
         Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
         Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
         Src/BLDCController.cpp
+        Src/i2c_helpers.c
 )
 
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)

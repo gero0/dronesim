@@ -10,7 +10,6 @@ extern "C"{
 #endif
 
 #include <stdint.h>
-#include <inv_mpu.h>
 #include "stm32f4xx_hal.h"
 
 void mpu_interface_register(I2C_HandleTypeDef *i2c);
