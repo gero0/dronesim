@@ -18,7 +18,7 @@ bool nRF24_TXDone();
 //	Configuration
 //
 
-#define NRF24_DYNAMIC_PAYLOAD	0
+#define NRF24_DYNAMIC_PAYLOAD	1
 #define NRF24_INTERRUPT_MODE	0
 
 //
