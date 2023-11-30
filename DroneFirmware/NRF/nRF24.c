@@ -612,6 +612,20 @@ void nRF24_Event(void)
 	}
 }
 
+
+#if NRF24_DYNAMIC_PAYLOAD == 1
+
+void nRF24_EnableAckPayload(){
+    nRF24_WriteRegister(NRF24_FEATURE, nRF24_ReadRegister(NRF24_FEATURE) | (1<<NRF24_EN_ACK_PAY));
+}
+
+void nRF24_WriteAckPayload(uint8_t * data, uint8_t size){
+    nRF24_WriteRegisters(NRF24_CMD_W_ACK_PAYLOAD, data, size);
+}
+
+#endif
+
+
 void nRF24_Init(SPI_HandleTypeDef *hspi)
 {
 	hspi_nrf = hspi;
@@ -625,7 +639,7 @@ void nRF24_Init(SPI_HandleTypeDef *hspi)
 	nRF24_SetDataRate(NRF24_RF_DR_250KBPS); // Data Rate
 	nRF24_EnableCRC(1); // Enable CRC
 	nRF24_SetCRCLength(NRF24_CRC_WIDTH_1B); // CRC Length 1 byte
-	nRF24_SetRetries(0x04, 0x07); // 1000us, 7 times
+	nRF24_SetRetries(0x0F, 0x07); // 1000us, 7 times
 
 #if (NRF24_DYNAMIC_PAYLOAD == 1)
 	nRF24_WriteRegister(NRF24_FEATURE, nRF24_ReadRegister(NRF24_FEATURE) | (1<<NRF24_EN_DPL)); // Enable dynamic payload feature
@@ -638,10 +652,11 @@ void nRF24_Init(SPI_HandleTypeDef *hspi)
 	nRF24_EnablePipe(0, 1); // Enable pipe 0
 	nRF24_AutoACK(0, 1); // Enable auto ACK for pipe 0
 	nRF24_SetAddressWidth(NRF24_ADDR_SIZE); // Set address size
+    nRF24_EnableAckPayload();
 
 	nRF24_Delay_ms(1);
 
-	nRF24_EnableRXDataReadyIRQ(1);
+	nRF24_EnableRXDataReadyIRQ(0);
 	nRF24_EnableTXDataSentIRQ(0);
 	nRF24_EnableMaxRetransmitIRQ(0);
 

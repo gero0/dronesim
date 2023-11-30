@@ -44,6 +44,8 @@ private:
     bool init_transceiver();
     bool waitTXTimeout(uint32_t timeout);
     void emergency_stop();
+    void prepareResponse();
+    MessageType currentMsgType = GetAngles;
 
     DroneController *controller;
     SemaphoreHandle_t controller_mutex;
@@ -51,7 +53,6 @@ private:
     SPI_HandleTypeDef *nrf_spi_handle;
 
     CommState comm_state = CommState::Init;
-    Message output_msg;
     Vector3 position_of_last_contact = {0.0f, 0.0f, 0.0f};
     TickType_t last_contact_time = xTaskGetTickCount();
 };

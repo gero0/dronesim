@@ -6,6 +6,7 @@
 #include "comm_manager.h"
 
 void CommManager::update() {
+    Message input_msg;
     switch (comm_state) {
         case CommState::Init: {
             bool ok = init_transceiver();
@@ -18,21 +19,7 @@ void CommManager::update() {
             break;
 
         case CommState::Listen:
-            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(0));
-            comm_state = receive_message(&output_msg, &last_contact_time);
-            break;
-
-        case CommState::Send: {
-            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(1));
-            uint8_t output_buffer[NRF24_PAYLOAD_SIZE];
-            nRF24_TX_Mode();
-            serialize_msg(output_buffer, &output_msg);
-            nRF24_WriteTXPayload(output_buffer, NRF24_PAYLOAD_SIZE);
-            waitTXTimeout(10);
-            nRF24_WaitTX();
-            nRF24_RX_Mode();
-            comm_state = CommState::Listen;
-        }
+            receive_message(&input_msg, &last_contact_time);
             break;
 
         case CommState::ConnLost:
@@ -49,15 +36,77 @@ void CommManager::update() {
 }
 
 bool CommManager::init_transceiver() {
-    vTaskDelay(100 / portTICK_RATE_MS);
+    rtos_delay(100);
     nRF24_Init(nrf_spi_handle);
-    vTaskDelay(100 / portTICK_RATE_MS);
+    rtos_delay(100);
     nRF24_SetCRCLength(NRF24_CRC_WIDTH_2B);
     nRF24_SetRXAddress(0, (uint8_t *) "Dro");
     nRF24_SetTXAddress((uint8_t *) "Pil");
     nRF24_RX_Mode();
+    nRF24_FlushTX();
+    nRF24_FlushRX();
+    prepareResponse();
     return true;
 }
+
+
+void CommManager::prepareResponse() {
+    Message output_msg;
+    switch (currentMsgType) {
+        case GetAngles: {
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            Rotation rot = controller->get_rotation();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetAngles;
+            memcpy(output_msg.data, &rot, sizeof(rot));
+        }
+        break;
+        case GetPosition: {
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            Vector3 pos = controller->get_position();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetPosition;
+            memcpy(output_msg.data, &pos, sizeof(pos));
+        }
+        break;
+        case GetAltitude: {
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            float alt = controller->get_altitude();
+            float radar = controller->get_radar_altitude();
+            float abs = controller->get_absolute_altitude();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetAltitude;
+            memcpy(output_msg.data, &alt, sizeof(float));
+            memcpy(output_msg.data + sizeof(float), &radar, sizeof(float));
+            memcpy(output_msg.data + 2 * sizeof(float), &abs, sizeof(float));
+        }
+        break;
+        case GetStatus: {
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            auto speeds = controller->get_motor_speeds();
+            xSemaphoreGive(controller_mutex);
+            uint8_t speeds_int[4];
+            for (int i = 0; i < 4; i++) {
+                speeds_int[i] = static_cast<uint8_t>(speeds[i] * 100.0f);
+            }
+            output_msg.type = GetStatus;
+            memcpy(output_msg.data, speeds_int, sizeof(uint8_t) * 4);
+        }
+        break;
+        default:
+            currentMsgType = GetAngles;
+            break;
+    }
+    uint8_t buffer[32];
+    serialize_msg(buffer, &output_msg);
+    nRF24_FlushTX();
+    nRF24_WriteAckPayload(buffer, 32);
+    currentMsgType = (MessageType)((int)(currentMsgType) + 1);
+    if(currentMsgType == (MessageType)(8)){
+        currentMsgType = GetAngles;
+    }
+}
+
 
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
@@ -71,6 +120,7 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
     uint8_t input_buffer[NRF24_PAYLOAD_SIZE];
 
     if (nRF24_RXAvailible()) {
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(1));
         *last_contact_time = xTaskGetTickCount();
         uint8_t read;
         nRF24_ReadRXPaylaod(input_buffer, &read);
@@ -97,7 +147,6 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                     controller->set_yaw(yaw);
                 }
                 xSemaphoreGive(controller_mutex);
-                return CommState::Listen;
             }
             case AltitudeInput: {
                 float alt_input = *(float *) (&msg.data[0]);
@@ -109,7 +158,6 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                     xSemaphoreTake(controller_mutex, portMAX_DELAY);
                     controller->set_altitude(altitude_sp);
                     xSemaphoreGive(controller_mutex);
-                    return CommState::Listen;
                 }
             }
                 break;
@@ -117,53 +165,17 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller->hover();
                 xSemaphoreGive(controller_mutex);
-                return CommState::Listen;
+                break;
             case RTOCommand:
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller->RTO();
                 xSemaphoreGive(controller_mutex);
-                return CommState::Listen;
-            case GetAngles: {
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                Rotation rot = controller->get_rotation();
-                xSemaphoreGive(controller_mutex);
-                output_msg->type = GetAngles;
-                memcpy(output_msg->data, &rot, sizeof(rot));
-                return CommState::Send;
-            }
-            case GetPosition: {
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                Vector3 pos = controller->get_position();
-                xSemaphoreGive(controller_mutex);
-                output_msg->type = GetPosition;
-                memcpy(output_msg->data, &pos, sizeof(pos));
-                return CommState::Send;
-            }
-            case GetAltitude: {
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                float alt = controller->get_altitude();
-                float radar = controller->get_radar_altitude();
-                float abs = controller->get_absolute_altitude();
-                xSemaphoreGive(controller_mutex);
-                output_msg->type = GetAltitude;
-                memcpy(output_msg->data, &alt, sizeof(float));
-                memcpy(output_msg->data + sizeof(float), &radar, sizeof(float));
-                memcpy(output_msg->data + 2 * sizeof(float), &abs, sizeof(float));
-                return CommState::Send;
-            }
-            case GetStatus: {
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                auto speeds = controller->get_motor_speeds();
-                xSemaphoreGive(controller_mutex);
-                uint8_t speeds_int[4];
-                for (int i = 0; i < 4; i++) {
-                    speeds_int[i] = static_cast<uint8_t>(speeds[i] * 100.0f);
-                }
-                output_msg->type = GetStatus;
-                memcpy(output_msg->data, speeds_int, sizeof(uint8_t) * 4);
-                return CommState::Send;
-            }
+                break;
+            default:
+                break;
         }
+        prepareResponse();
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(0));
     }
     // if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
     //     return CommState::ConnLost;

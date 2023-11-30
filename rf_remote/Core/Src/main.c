@@ -249,38 +249,35 @@ Message receive_message() {
 }
 
 void send_messages(Queue *queue) {
-    const int response_tries_treshold = 100;
+    const int response_tries_treshold = 50;
 
     while (!queue_empty(queue)) {
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
         Message *msg = queue_get(queue);
-        if (msg->type == GetAngles || msg->type == GetPosition || msg->type == GetAltitude || msg->type == GetStatus) {
-            send_message(*msg);
-            nRF24_RX_Mode();
 
-            bool response_received = false;
-            for (int i = 0; i < response_tries_treshold && !response_received; i++) {
-                HAL_Delay(1);
-                response_received = !nRF24_IsRxEmpty();
-            }
+        send_message(*msg);
+        bool response_received = false;
 
-            if (response_received) {
-                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
-                Message resp = receive_message();
-                connection_ok = true;
-                last_response_time = HAL_GetTick();
-                update_values(resp);
-                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
-            }else{
-                connection_ok = false;
-            }
-            nRF24_TX_Mode();
-        } else {
-            send_message(*msg);
+        for (int i = 0; i < response_tries_treshold && !response_received; i++) {
+            HAL_Delay(1);
+            response_received = nRF24_RXAvailible();
+        }
+
+        if (response_received) {
+            Message resp = receive_message();
+            connection_ok = true;
+            last_response_time = HAL_GetTick();
+            update_values(resp);
+        }else{
+            connection_ok = false;
+            nRF24_FlushTX();
+            nRF24_FlushRX();
         }
 
         last_msg_time = HAL_GetTick();
         last_msg_type = msg->type;
         queue_pop(queue);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
     }
 }
 
@@ -358,7 +355,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-    MessageType mt = GetAngles;
+//    MessageType mt = GetAngles;
+    MessageType mt = AnglesInput;
 
     const int screen_update_period = 50;
     size_t last_screen_update = 0;
@@ -370,18 +368,17 @@ int main(void)
             update_display();
             last_screen_update = HAL_GetTick();
         }
-        const int T = 200;
+        const int T = 80;
         if (current_time - last_msg_time > T) {
             Message hb;
             hb.type = mt;
             queue_push(msg_queue, &hb);
-            mt += 1;
-            if (mt > GetStatus) {
-                mt = GetAngles;
-            }
+//            mt += 1;
+//            if (mt > GetStatus) {
+//                mt = GetAngles;
+//            }
         }
         send_messages(msg_queue);
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
         if (db_is_pressed(&sw1_debouncer) && db_state_changed(&sw1_debouncer)){
             currentScreen += 1;

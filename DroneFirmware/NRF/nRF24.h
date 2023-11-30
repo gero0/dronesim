@@ -41,6 +41,9 @@ typedef enum
 // Init
 //
 
+void nRF24_EnableAckPayload();
+void nRF24_WriteAckPayload(uint8_t * data, uint8_t size);
+
 void nRF24_Init(SPI_HandleTypeDef *hspi);
 
 //

@@ -106,7 +106,7 @@ DroneController controller(&motors[0], &motors[1], &motors[2], &motors[3], &ahrs
 SemaphoreHandle_t controller_mutex;
 CommManager* commManager;
 volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
-static bool kernel_started = false;
+static volatile bool kernel_started = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
