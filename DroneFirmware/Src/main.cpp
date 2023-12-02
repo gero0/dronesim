@@ -80,8 +80,8 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE BEGIN PV */
 
 constexpr uint16_t MOTOR_OFF = 500;
-constexpr uint16_t MOTOR_MIN = 520;
-constexpr uint16_t MOTOR_MAX = 500;
+constexpr uint16_t MOTOR_MIN = 530;
+constexpr uint16_t MOTOR_MAX = 700;
 
 [[noreturn]] void emergency_stop() {
     //TODO: stop all motors
@@ -131,6 +131,20 @@ void StartDefaultTask(void *argument);
 /* USER CODE BEGIN 0 */
 volatile bool debug_log_cmplt = true;
 uint8_t uart_recv_byte;
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    /* USER CODE BEGIN Callback 0 */
+
+    /* USER CODE END Callback 0 */
+
+    /* USER CODE BEGIN Callback 1 */
+    if (htim == &htim10) {
+        ahrs.madgwick_update();
+    }
+    /* USER CODE END Callback 1 */
+}
+
 
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c){
   if(hi2c == &hi2c1) {
@@ -215,20 +229,24 @@ void init_motors() {
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelay(800 / portTICK_RATE_MS);
     TIM1->CCR1 = 1000;
     TIM1->CCR2 = 1000;
     TIM1->CCR3 = 1000;
     TIM1->CCR4 = 1000;
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelay(800 / portTICK_RATE_MS);
     TIM1->CCR1 = 500;
     TIM1->CCR2 = 500;
     TIM1->CCR3 = 500;
     TIM1->CCR4 = 500;
-    vTaskDelay(1000 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_RATE_MS);
 }
 
 [[noreturn]] void ControlTask(void* pvParameters) {
+    init_motors();
+    for(auto& motor : motors) {
+        motor.enable();
+    }
     uint32_t prev_time = xTaskGetTickCount();
     while (true) {
         vTaskDelay(1 / portTICK_RATE_MS);
@@ -338,11 +356,6 @@ int main(void)
     HAL_UART_Receive_IT(&huart1, &uart_recv_byte, 1);
     //start updating madgwick filter in regular intervals
     HAL_TIM_Base_Start_IT(&htim10);
-
-    init_motors();
-    for(auto& motor : motors) {
-        motor.enable();
-    }
 
     xTaskCreate(CommTask, "CommTask", 300, NULL, 2, NULL);
     xTaskCreate(ControlTask, "ControlTask", 800, NULL, 3, NULL);
@@ -878,29 +891,6 @@ void StartDefaultTask(void *argument)
         osDelay(1);
     }
   /* USER CODE END 5 */
-}
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-    else if (htim == &htim10) {
-        ahrs.madgwick_update();
-    }
-  /* USER CODE END Callback 1 */
 }
 
 /**

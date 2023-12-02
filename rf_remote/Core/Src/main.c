@@ -127,7 +127,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 }
 
-void check_inputs(Queue *msg_queue) {
+void check_inputs() {
     joy0_x = (float) (adc_readings[0]) / (4096);
     joy0_y = (float) (adc_readings[1]) / (4096);
     joy1_x = (float) (adc_readings[2]) / (4096);
@@ -220,6 +220,7 @@ void update_values(Message msg) {
             break;
         case GetPosition:
             memcpy(pos, msg.data, sizeof(float) * 3);
+            break;
         case GetStatus:
             memcpy(motors, msg.data, sizeof(uint8_t) * 4);
             break;
@@ -228,7 +229,7 @@ void update_values(Message msg) {
     }
 }
 
-void send_message(Message msg) {
+void transmit_message(Message msg) {
     uint8_t buffer[32];
     serialize_msg(buffer, &msg);
     nRF24_WriteTXPayload(buffer, NRF24_PAYLOAD_SIZE);
@@ -248,14 +249,14 @@ Message receive_message() {
     return resp;
 }
 
-void send_messages(Queue *queue) {
+void send_message(Queue *queue) {
     const int response_tries_treshold = 50;
 
-    while (!queue_empty(queue)) {
+    if (!queue_empty(queue)) {
         HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
         Message *msg = queue_get(queue);
 
-        send_message(*msg);
+        transmit_message(*msg);
         bool response_received = false;
 
         for (int i = 0; i < response_tries_treshold && !response_received; i++) {
@@ -289,6 +290,16 @@ void delay_us(uint16_t us)
     while (htim3.Instance->CNT <= us) {
         //wait
     }
+}
+
+Message create_angles_msg(){
+    Message msg;
+    msg.type = AnglesInput;
+    float temp = 1.0f;
+    memcpy(&msg.data[0], &joy1_y, 4);
+    memcpy(&msg.data[4], &temp, 4);
+    memcpy(&msg.data[8], &joy1_x, 4);
+    return msg;
 }
 /* USER CODE END 0 */
 
@@ -348,9 +359,6 @@ int main(void)
     LCD_clear();
     LCD_write_text("oh no", 5);
 
-    Message msg = { .type =  GetAngles, .data = {0}};
-    send_message(msg);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -358,27 +366,44 @@ int main(void)
 //    MessageType mt = GetAngles;
     MessageType mt = AnglesInput;
 
+    const int msg_send_period = 80;
     const int screen_update_period = 50;
     size_t last_screen_update = 0;
 
     while (1) {
-        check_inputs(msg_queue);
+        check_inputs();
         size_t current_time = HAL_GetTick();
+
         if(current_time - last_screen_update >= screen_update_period){
             update_display();
             last_screen_update = HAL_GetTick();
         }
-        const int T = 80;
-        if (current_time - last_msg_time > T) {
-            Message hb;
-            hb.type = mt;
-            queue_push(msg_queue, &hb);
-//            mt += 1;
-//            if (mt > GetStatus) {
-//                mt = GetAngles;
+
+        if (current_time - last_msg_time > msg_send_period) {
+            switch (mt) {
+                case AnglesInput:{
+                    Message msg = create_angles_msg();
+                    queue_push(msg_queue, &msg);
+                }
+                    break;
+                case AltitudeInput:
+                    //queue msg with alt.
+                    break;
+                case HoldCommand:
+                    //TODO
+                    break;
+                case RTOCommand:
+                    //TODO
+                    break;
+                default:
+                    break;
+            }
+//            mt++;
+//            if (mt > RTOCommand){
+//                mt = AnglesInput;
 //            }
+            send_message(msg_queue);
         }
-        send_messages(msg_queue);
 
         if (db_is_pressed(&sw1_debouncer) && db_state_changed(&sw1_debouncer)){
             currentScreen += 1;

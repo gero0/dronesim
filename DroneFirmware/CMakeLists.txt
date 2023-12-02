@@ -56,7 +56,6 @@ add_executable(
         startup_stm32f411xe.s
         Src/stm32f4xx_it.c
         Src/stm32f4xx_hal_msp.c
-        Src/stm32f4xx_hal_timebase_tim.c
         Src/system_stm32f4xx.c
         Src/mpu_interface.c
         Src/mpu_helpers.c
