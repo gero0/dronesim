@@ -24,18 +24,18 @@ void DroneController::update(float dt) {
         position_global.z = 0;
     }
 
-    if (roll_setpoint == 0.0f && pitch_setpoint == 0.0f) {
-        controlState = ControlState::PointHover;
-    } else {
-        controlState = ControlState::Direct;
+    if(radar_altitude < 0.2){
+        yaw_setpoint = rotation.yaw;
     }
+
 
     control_update(dt);
 }
 
 void DroneController::control_update(float dt) {
     v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
-    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+//    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+    v_yaw = yaw_raw;
 
     if (controlState == ControlState::PointHover) {
         Vector3 position_local = rotate_flat(position_global, -rotation.yaw);
@@ -49,10 +49,20 @@ void DroneController::control_update(float dt) {
         v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);
     }
 
-    front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
-    front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
-    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
-    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+//    front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
+//    front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+//    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+//    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+//
+    back_right->set_speed(std::clamp(v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
+    back_left->set_speed(std::clamp(v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+    front_right->set_speed(std::clamp(- v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+    front_left->set_speed(std::clamp(- v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+
+//    back_right->set_speed(std::clamp(v_pitch - v_roll, 0.0f, 1.0f));
+//    back_left->set_speed(std::clamp(v_pitch + v_roll, 0.0f, 1.0f));
+//    front_right->set_speed(std::clamp(- v_pitch - v_roll, 0.0f, 1.0f));
+//    front_left->set_speed(std::clamp(- v_pitch + v_roll, 0.0f, 1.0f));
 }
 
 
@@ -79,6 +89,11 @@ PidValues DroneController::get_last_pid() {
 PidValues DroneController::get_setpoints() {
     return {altitude_setpoint, pitch_setpoint, roll_setpoint, yaw_setpoint};
 }
+
+void DroneController::yaw_raw_input(float input){
+    yaw_raw = input * yaw_raw_constant;
+}
+
 
 void DroneController::set_yaw(float sp) {
 //    yaw_setpoint = normalize_angle(sp);

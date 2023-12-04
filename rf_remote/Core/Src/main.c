@@ -295,10 +295,12 @@ void delay_us(uint16_t us)
 Message create_angles_msg(){
     Message msg;
     msg.type = AnglesInput;
-    float temp = 1.0f;
-    memcpy(&msg.data[0], &joy1_y, 4);
+    float temp = 2.0f * joy0_y - 0.983f;
+    float roll = 0.983f - 2.0f * joy1_x;
+    float pitch = 2.0f * joy1_y - 0.983f;
+    memcpy(&msg.data[0], &pitch, 4);
     memcpy(&msg.data[4], &temp, 4);
-    memcpy(&msg.data[8], &joy1_x, 4);
+    memcpy(&msg.data[8], &roll, 4);
     return msg;
 }
 /* USER CODE END 0 */

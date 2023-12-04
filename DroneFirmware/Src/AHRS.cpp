@@ -54,9 +54,11 @@ void AHRS::init_fusion() {
     constexpr FusionAhrsSettings settings = {
         .convention = FusionConventionNwu,
         .gain = 0.5f,
+        .gyroscopeRange = 1000,
         .accelerationRejection = 10.0f,
         .magneticRejection = 10.0f,
-        .recoveryTriggerPeriod = 5 * AHRS_SAMPLE_RATE, /* 5 seconds */
+//        .recoveryTriggerPeriod = 5 * AHRS_SAMPLE_RATE, /* 5 seconds */
+        .recoveryTriggerPeriod = 0 /* 5 seconds */
     };
 
     FusionAhrsInitialise(&ahrs);
@@ -197,6 +199,7 @@ void AHRS::update(float dt) {
     gyro_to_dps(gyro_raw, const_cast<float *>(gyro_dps), GYRO_FSR);
 
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
+//    gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
 
     if (qmc_data_ready()) {

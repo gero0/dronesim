@@ -16,6 +16,7 @@ void BLDCController::set_speed(float speed) {
     const float reg_val = static_cast<float>(min_value)
         + speed * static_cast<float>(max_value - min_value);
     *ccr_register = static_cast<uint16_t>(reg_val);
+    this->speed = speed;
 }
 
 float BLDCController::get_speed() {

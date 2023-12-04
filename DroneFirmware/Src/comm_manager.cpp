@@ -138,14 +138,14 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller->set_pitch(pitch_input * max_angle);
                 controller->set_roll(roll_input * max_angle);
-
-                auto timestamp = xTaskGetTickCount();
-                if (timestamp > last_angle_input) {
-                    last_angle_input = timestamp;
-                    auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
-                    yaw = yaw + yaw_input * yaw_constant;
-                    controller->set_yaw(yaw);
-                }
+                controller->yaw_raw_input(yaw_input);
+//                auto timestamp = xTaskGetTickCount();
+//                if (timestamp > last_angle_input) {
+//                    last_angle_input = timestamp;
+//                    auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
+//                    yaw = yaw + yaw_input * yaw_constant;
+//                    controller->set_yaw(yaw);
+//                }
                 xSemaphoreGive(controller_mutex);
             }
             case AltitudeInput: {

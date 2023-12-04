@@ -88,9 +88,13 @@ public:
 
     std::array<float, 4> get_motor_speeds();
 
+    void yaw_raw_input(float input);
+
 private:
     SensorReader *sensor_reader;
 
+    const float yaw_raw_constant = 0.1;
+    float yaw_raw = 0.0f;
     float yaw_setpoint = 0.0f;
     float pitch_setpoint = 0.0f;
     float roll_setpoint = 0.0f;
@@ -124,13 +128,16 @@ private:
     PID thrust_pid{4.0f, 0.5f, 1.0f, 0.0f, 1.0f};
     PID pitch_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
     PID roll_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
-    PID yaw_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
+    PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
 
     Vector3 velocity_global{0.0f, 0.0f, 0.0f};
     Rotation rotation{0.0f, 0.0f, 0.0f};
     Rotation angular_velocity{0.0f, 0.0f, 0.0f};
 
-    ControlState controlState = ControlState::PointHover;
+//    ControlState controlState = ControlState::PointHover;
+    ControlState controlState = ControlState::Direct;
+
+
 };
 
 #endif //DRONESIMPROJECT_DRONECONTROLLER_H
