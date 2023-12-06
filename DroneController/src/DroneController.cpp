@@ -26,6 +26,9 @@ void DroneController::update(float dt) {
 
     if(radar_altitude < 0.2){
         yaw_setpoint = rotation.yaw;
+        if(altitude_setpoint < 0.0f){
+            altitude_setpoint = 0.0f;
+        }
     }
 
 

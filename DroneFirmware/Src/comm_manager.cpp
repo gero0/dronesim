@@ -93,6 +93,18 @@ void CommManager::prepareResponse() {
             memcpy(output_msg.data, speeds_int, sizeof(uint8_t) * 4);
         }
         break;
+        case GetSetpoints: {
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
+            auto altitude_sp = controller->get_altitude_setpoint();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetSetpoints;
+            memcpy(output_msg.data, &pitch, sizeof(float));
+            memcpy(output_msg.data + 4, &yaw, sizeof(float));
+            memcpy(output_msg.data + 8, &roll, sizeof(float));
+            memcpy(output_msg.data + 12, &altitude_sp, sizeof(float));
+        }
+            break;
         default:
             currentMsgType = GetAngles;
             break;
@@ -102,7 +114,7 @@ void CommManager::prepareResponse() {
     nRF24_FlushTX();
     nRF24_WriteAckPayload(buffer, 32);
     currentMsgType = (MessageType)((int)(currentMsgType) + 1);
-    if(currentMsgType == (MessageType)(8)){
+    if(currentMsgType == (MessageType)(9)){
         currentMsgType = GetAngles;
     }
 }
@@ -110,7 +122,7 @@ void CommManager::prepareResponse() {
 
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
-    const float altitude_const = 0.1;
+    const float altitude_const = 0.4;
     const float max_angle = (35.0f / 180.0f) * M_PI;
     const float yaw_constant = 0.1f;
 
@@ -150,6 +162,9 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
             }
             case AltitudeInput: {
                 float alt_input = *(float *) (&msg.data[0]);
+                if( std::abs(alt_input) < 0.1){
+                    break;
+                }
                 auto timestamp = xTaskGetTickCount();
                 if (timestamp > last_altitude_input) {
                     last_altitude_input = timestamp;

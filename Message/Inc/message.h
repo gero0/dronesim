@@ -17,6 +17,7 @@ typedef enum MessageType {
     GetPosition = 5,
     GetAltitude = 6,
     GetStatus = 7,
+    GetSetpoints = 8
 } MessageType;
 
 typedef struct Message {

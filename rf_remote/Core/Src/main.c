@@ -98,6 +98,11 @@ float joy0_y = 0.0f;
 float joy1_x = 0.0f;
 float joy1_y = 0.0f;
 
+float pitch_sp = 0.0f;
+float yaw_sp = 0.0f;
+float roll_sp = 0.0f;
+float altitude_sp = 0.0f;
+
 uint16_t adc_readings[4];
 
 bool connection_ok = false;
@@ -142,6 +147,7 @@ typedef enum DisplayScreen{
     DisplayScreen_Motors = 4,
     DisplayScreen_Altitude = 5,
     DisplayScreen_Other = 6,
+    DisplayScreen_Setpoints = 7,
 } DisplayScreen;
 
 typedef void (*Display_t)(char[], char[]);
@@ -184,6 +190,11 @@ void display_draw_other(char line_1[], char line_2[]){
     sprintf(line_2, "%d", last_response_time);
 }
 
+void display_draw_setpoints(char line_1[], char line_2[]){
+    sprintf(line_1, "%.2f %.2f", pitch_sp, roll_sp);
+    sprintf(line_2, "%.2f %.2f", yaw_sp, altitude_sp);
+}
+
 Display_t screens[] = {
         display_draw_summary,
         display_draw_analog,
@@ -192,6 +203,7 @@ Display_t screens[] = {
         display_draw_motors,
         display_draw_altitude,
         display_draw_other,
+        display_draw_setpoints,
 };
 
 DisplayScreen currentScreen = DisplayScreen_Summary;
@@ -224,6 +236,11 @@ void update_values(Message msg) {
         case GetStatus:
             memcpy(motors, msg.data, sizeof(uint8_t) * 4);
             break;
+        case GetSetpoints:
+            memcpy(&pitch_sp, &msg.data[0], sizeof(float));
+            memcpy(&yaw_sp, &msg.data[4], sizeof(float));
+            memcpy(&roll_sp, &msg.data[8], sizeof(float));
+            memcpy(&altitude_sp, &msg.data[12], sizeof(float));
         default:
             break;
     }
@@ -295,12 +312,21 @@ void delay_us(uint16_t us)
 Message create_angles_msg(){
     Message msg;
     msg.type = AnglesInput;
-    float temp = 2.0f * joy0_y - 0.983f;
+    float yaw = 0.f;
+//    float yaw = 2.0f * joy0_y - 0.983f;
     float roll = 0.983f - 2.0f * joy1_x;
     float pitch = 2.0f * joy1_y - 0.983f;
     memcpy(&msg.data[0], &pitch, 4);
-    memcpy(&msg.data[4], &temp, 4);
+    memcpy(&msg.data[4], &yaw, 4);
     memcpy(&msg.data[8], &roll, 4);
+    return msg;
+}
+
+Message create_altitude_msg(){
+    Message msg;
+    msg.type = AltitudeInput;
+    float alt = 2.0f * joy0_y - 0.983f;
+    memcpy(&msg.data[0], &alt, 4);
     return msg;
 }
 /* USER CODE END 0 */
@@ -388,8 +414,10 @@ int main(void)
                     queue_push(msg_queue, &msg);
                 }
                     break;
-                case AltitudeInput:
-                    //queue msg with alt.
+                case AltitudeInput: {
+                    Message msg = create_altitude_msg();
+                    queue_push(msg_queue, &msg);
+                }
                     break;
                 case HoldCommand:
                     //TODO
@@ -400,16 +428,16 @@ int main(void)
                 default:
                     break;
             }
-//            mt++;
-//            if (mt > RTOCommand){
-//                mt = AnglesInput;
-//            }
+            mt++;
+            if (mt > AltitudeInput){
+                mt = AnglesInput;
+            }
             send_message(msg_queue);
         }
 
         if (db_is_pressed(&sw1_debouncer) && db_state_changed(&sw1_debouncer)){
             currentScreen += 1;
-            if(currentScreen > DisplayScreen_Other){
+            if(currentScreen > DisplayScreen_Setpoints){
                 currentScreen = DisplayScreen_Summary;
             }
         }
