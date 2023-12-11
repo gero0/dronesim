@@ -266,6 +266,14 @@ Message receive_message() {
     return resp;
 }
 
+void init_transceiver(){
+    nRF24_Init(&hspi2);
+    nRF24_SetRXAddress(0, (uint8_t *) "Pil");
+    nRF24_SetTXAddress((uint8_t *) "Dro");
+    nRF24_SetCRCLength(NRF24_CRC_WIDTH_2B);
+    nRF24_TX_Mode();
+}
+
 void send_message(Queue *queue) {
     const int response_tries_treshold = 50;
 
@@ -290,6 +298,9 @@ void send_message(Queue *queue) {
             connection_ok = false;
             nRF24_FlushTX();
             nRF24_FlushRX();
+            init_transceiver();
+            nRF24_FlushTX();
+            nRF24_FlushRX();
         }
 
         last_msg_time = HAL_GetTick();
@@ -312,10 +323,10 @@ void delay_us(uint16_t us)
 Message create_angles_msg(){
     Message msg;
     msg.type = AnglesInput;
-    float yaw = 0.f;
-//    float yaw = 2.0f * joy0_y - 0.983f;
-    float roll = 0.983f - 2.0f * joy1_x;
-    float pitch = 2.0f * joy1_y - 0.983f;
+//    float yaw = 0.f;
+    float yaw = 0.983f - 2.0f * joy1_y;
+    float pitch = 0.983f - 2.0f * joy0_y;
+    float roll = 2.0f * joy0_x - 0.983f;
     memcpy(&msg.data[0], &pitch, 4);
     memcpy(&msg.data[4], &yaw, 4);
     memcpy(&msg.data[8], &roll, 4);
@@ -325,7 +336,7 @@ Message create_angles_msg(){
 Message create_altitude_msg(){
     Message msg;
     msg.type = AltitudeInput;
-    float alt = 2.0f * joy0_y - 0.983f;
+    float alt = 2.0f * joy1_x - 0.983f;
     memcpy(&msg.data[0], &alt, 4);
     return msg;
 }
@@ -366,13 +377,11 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
     sw1_debouncer = db_init(JOY1_SW_GPIO_Port, JOY1_SW_Pin, true, 5);
-
-    nRF24_Init(&hspi2);
+    
     HAL_Delay(1000);
-    nRF24_SetRXAddress(0, (uint8_t *) "Pil");
-    nRF24_SetTXAddress((uint8_t *) "Dro");
-    nRF24_SetCRCLength(NRF24_CRC_WIDTH_2B);
-    nRF24_TX_Mode();
+
+    init_transceiver();
+
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
 
     Queue *msg_queue = queue_create(100, sizeof(Message));

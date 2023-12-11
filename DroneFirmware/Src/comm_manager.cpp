@@ -160,6 +160,7 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
 //                }
                 xSemaphoreGive(controller_mutex);
             }
+            break;
             case AltitudeInput: {
                 float alt_input = *(float *) (&msg.data[0]);
                 if( std::abs(alt_input) < 0.1){
