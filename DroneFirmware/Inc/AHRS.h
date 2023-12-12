@@ -58,6 +58,7 @@ private:
     VL53L0X_DEV Dev = &vl53l0x_c;
 
     uint32_t bme_period = 0;
+    size_t bme_timestamp = 0;
     bme280_dev bme_dev {};
     bme280_settings bme_settings {};
 
@@ -71,6 +72,10 @@ private:
     void init_vl5(I2C_HandleTypeDef *vl5_i2c) const;
     bool init_bme(I2C_HandleTypeDef *bme_i2c);
     bme280_data get_pressure(uint32_t period, bme280_dev* dev);
+
+    static constexpr int num_alt_samples = 4;
+    double alt_samples[num_alt_samples];
+    int alt_samples_i = 0;
 };
 
 #endif //DRONEFIRMWARE_AHRS_H

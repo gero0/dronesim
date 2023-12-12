@@ -17,6 +17,8 @@ extern "C" {
 #include "mpu_helpers.h"
 #include "qmc5883l.h"
 #include "bme_interface.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 constexpr int AHRS_SAMPLE_RATE = 500;
 
@@ -100,12 +102,16 @@ bool AHRS::init_bme(I2C_HandleTypeDef* bme_i2c) {
     bme280_get_sensor_settings(&bme_settings, &bme_dev);
     bme_settings.filter = BME280_FILTER_COEFF_16;
     bme_settings.osr_h = BME280_OVERSAMPLING_1X;
-    bme_settings.osr_p = BME280_OVERSAMPLING_4X;
+    bme_settings.osr_p = BME280_OVERSAMPLING_16X;
     bme_settings.osr_t = BME280_OVERSAMPLING_1X;
     bme_settings.standby_time = BME280_STANDBY_TIME_0_5_MS;
     bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &bme_settings, &bme_dev);
     bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme_dev);
     bme280_cal_meas_delay(&bme_period, &bme_settings);
+
+    bme_timestamp = xTaskGetTickCount();
+
+    std::fill(alt_samples, alt_samples + num_alt_samples, 0.0);
 
     return true;
 }
@@ -218,20 +224,34 @@ void AHRS::update(float dt) {
         radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
     }
 
+    if(xTaskGetTickCount() - bme_timestamp >= (bme_period / 1000)){
+        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
+        //international barometric formula
+        //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
+        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
 
-    const double pressure = get_pressure(bme_period, &bme_dev).pressure;
-    //international barometric formula
-    //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
-    const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-    if(alt > 0.0f && alt < 10000.0f) {
-        abs_altitude = static_cast<float>(alt);
-        if(radar_altitude < 0.8f) {
-            altitude = radar_altitude;
-            base_altitude = abs_altitude - altitude;
-        }else {
-            altitude = abs_altitude - base_altitude;
+        if(alt > 0.0f && alt < 10000.0f) {
+            alt_samples[alt_samples_i] = alt;
+            alt_samples_i = (alt_samples_i + 1) % num_alt_samples;
         }
+
+        double sum = 0.0;
+        for(double alt_sample : alt_samples){
+            sum += alt_sample;
+        }
+        sum /= num_alt_samples;
+
+        abs_altitude = static_cast<float>(sum);
+        bme_timestamp = xTaskGetTickCount();
     }
+
+    if(radar_altitude < 0.8f) {
+        altitude = radar_altitude;
+        base_altitude = abs_altitude - altitude;
+    }else {
+        altitude = abs_altitude - base_altitude;
+    }
+
 }
 
 
