@@ -79,14 +79,25 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 
-constexpr uint16_t MOTOR_OFF = 500;
+constexpr uint16_t MOTOR_OFF = 490;
 constexpr uint16_t MOTOR_MIN = 530;
-constexpr uint16_t MOTOR_MAX = 700;
+constexpr uint16_t MOTOR_MAX = 1000;
+
+AHRS ahrs;
+// MotorDriverMock motor_mocks[4];
+BLDCController motors[4] = {
+        BLDCController{(uint16_t *)(&TIM1->CCR1), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
+        BLDCController{(uint16_t *)(&TIM1->CCR2), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
+        BLDCController{(uint16_t *)(&TIM1->CCR3), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
+        BLDCController{(uint16_t *)(&TIM1->CCR4), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
+};
 
 [[noreturn]] void emergency_stop() {
-    //TODO: stop all motors
     //TODO: activate sound signal
     while (true) {
+        for(int i=0; i<4; i++){
+            motors[i].lock();
+        }
         HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
         HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
@@ -94,14 +105,6 @@ constexpr uint16_t MOTOR_MAX = 700;
     }
 }
 
-AHRS ahrs;
-// MotorDriverMock motor_mocks[4];
-BLDCController motors[4] = {
-    BLDCController{(uint16_t *)(&TIM1->CCR1), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
-    BLDCController{(uint16_t *)(&TIM1->CCR2), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
-    BLDCController{(uint16_t *)(&TIM1->CCR3), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
-    BLDCController{(uint16_t *)(&TIM1->CCR4), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
-};
 DroneController controller(&motors[0], &motors[1], &motors[2], &motors[3], &ahrs);
 SemaphoreHandle_t controller_mutex;
 CommManager* commManager;

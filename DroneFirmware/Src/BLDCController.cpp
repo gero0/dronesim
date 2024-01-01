@@ -13,6 +13,9 @@ BLDCController::BLDCController(uint16_t* ccr_register, uint16_t off_value, uint1
 }
 
 void BLDCController::set_speed(float speed) {
+    if(locked){
+        return;
+    }
     const float reg_val = static_cast<float>(min_value)
         + speed * static_cast<float>(max_value - min_value);
     *ccr_register = static_cast<uint16_t>(reg_val);
@@ -28,7 +31,15 @@ void BLDCController::disable() {
     enabled = false;
 }
 
+void BLDCController::lock() {
+    locked = true;
+    disable();
+}
+
 void BLDCController::enable() {
+    if(locked){
+        return;
+    }
     *ccr_register = min_value;
     enabled = true;
 }

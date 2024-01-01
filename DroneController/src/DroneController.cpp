@@ -57,10 +57,15 @@ void DroneController::control_update(float dt) {
 //    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
 //    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
 //
-    back_right->set_speed(std::clamp(v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
-    back_left->set_speed(std::clamp(v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
-    front_right->set_speed(std::clamp(- v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
-    front_left->set_speed(std::clamp(- v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+//    back_right->set_speed(std::clamp(v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
+//    back_left->set_speed(std::clamp(v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+//    front_right->set_speed(std::clamp(- v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+//    front_left->set_speed(std::clamp(- v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
+
+    back_right->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
+    back_left->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+    front_right->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+    front_left->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
 
 //    back_right->set_speed(std::clamp(v_pitch - v_roll, 0.0f, 1.0f));
 //    back_left->set_speed(std::clamp(v_pitch + v_roll, 0.0f, 1.0f));

@@ -193,9 +193,9 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
         prepareResponse();
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(0));
     }
-    // if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
-    //     return CommState::ConnLost;
-    // }
+     if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
+         emergency_stop();
+     }
     return CommState::Listen;
 }
 
