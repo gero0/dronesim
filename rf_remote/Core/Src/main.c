@@ -73,6 +73,7 @@ static void MX_TIM4_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 Debouncer sw1_debouncer;
+Debouncer sw_stop_debouncer;
 
 volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
 
@@ -128,6 +129,7 @@ float to_degrees(float a){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if(htim == &htim4){
         db_update(&sw1_debouncer);
+        db_update(&sw_stop_debouncer);
     }
 
 }
@@ -340,6 +342,13 @@ Message create_altitude_msg(){
     memcpy(&msg.data[0], &alt, 4);
     return msg;
 }
+
+Message create_estop_msg(){
+    Message msg;
+    msg.type = EStopCommand;
+    memset(&msg.data, 0, 31);
+    return msg;
+}
 /* USER CODE END 0 */
 
 /**
@@ -377,6 +386,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
     sw1_debouncer = db_init(JOY1_SW_GPIO_Port, JOY1_SW_Pin, true, 5);
+    sw_stop_debouncer = db_init(BTN_0_GPIO_Port, BTN_0_Pin, false, 5);
     
     HAL_Delay(1000);
 
@@ -395,6 +405,10 @@ int main(void)
     LCD_init(delay_us);
     LCD_clear();
     LCD_write_text("oh no", 5);
+
+    int stopButtonCounter = 0;
+    const int stopButtonTreshold = 30000;
+    bool sendStopCommand = false;
 
   /* USER CODE END 2 */
 
@@ -434,11 +448,19 @@ int main(void)
                 case RTOCommand:
                     //TODO
                     break;
+                case EStopCommand: {
+                    if(sendStopCommand){
+                        Message msg = create_estop_msg();
+                        queue_push(msg_queue, &msg);
+                    }
+                    sendStopCommand = false;
+                }
+                    break;
                 default:
                     break;
             }
             mt++;
-            if (mt > AltitudeInput){
+            if (mt > RTOCommand){
                 mt = AnglesInput;
             }
             send_message(msg_queue);
@@ -449,6 +471,16 @@ int main(void)
             if(currentScreen > DisplayScreen_Setpoints){
                 currentScreen = DisplayScreen_Summary;
             }
+        }
+
+        if (db_is_pressed(&sw_stop_debouncer)){
+            stopButtonCounter++;
+        }else{
+            stopButtonCounter = 0;
+        }
+
+        if(stopButtonCounter >= stopButtonTreshold){
+            sendStopCommand = true;
         }
     }
 
@@ -796,13 +828,13 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : BTN_0_Pin BTN_1_Pin */
   GPIO_InitStruct.Pin = BTN_0_Pin|BTN_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : BTN_2_Pin BTN_3_Pin */
   GPIO_InitStruct.Pin = BTN_2_Pin|BTN_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LCD_RS_Pin LCD_D4_Pin LCD_D5_Pin LCD_D6_Pin

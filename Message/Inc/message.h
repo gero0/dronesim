@@ -11,13 +11,15 @@ extern "C" {
 typedef enum MessageType {
     AnglesInput = 0,
     AltitudeInput = 1,
-    HoldCommand = 2,
-    RTOCommand = 3,
-    GetAngles = 4,
-    GetPosition = 5,
-    GetAltitude = 6,
-    GetStatus = 7,
-    GetSetpoints = 8
+    LandCommand = 2,
+    EStopCommand = 3,
+    HoldCommand = 4,
+    RTOCommand = 5,
+    GetAngles = 6,
+    GetPosition = 7,
+    GetAltitude = 8,
+    GetStatus = 9,
+    GetSetpoints = 10,
 } MessageType;
 
 typedef struct Message {

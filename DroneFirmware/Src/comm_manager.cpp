@@ -114,7 +114,7 @@ void CommManager::prepareResponse() {
     nRF24_FlushTX();
     nRF24_WriteAckPayload(buffer, 32);
     currentMsgType = (MessageType)((int)(currentMsgType) + 1);
-    if(currentMsgType == (MessageType)(9)){
+    if(currentMsgType == (MessageType)(11)){
         currentMsgType = GetAngles;
     }
 }
@@ -185,6 +185,14 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
             case RTOCommand:
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller->RTO();
+                xSemaphoreGive(controller_mutex);
+                break;
+            case EStopCommand:
+                emergency_stop();
+                break;
+            case LandCommand:
+                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                controller->auto_land();
                 xSemaphoreGive(controller_mutex);
                 break;
             default:
