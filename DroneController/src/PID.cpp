@@ -40,7 +40,7 @@ float PID::update(float setpoint, float process_value, float dt){
 }
 
 void PID::set_Kp(float Kp) {
-    this->Kd = Kd;
+    this->Kd = Kp;
 }
 
 void PID::set_Ki(float Ki) {
