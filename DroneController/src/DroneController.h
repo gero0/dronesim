@@ -86,6 +86,10 @@ public:
 
     float get_altitude_setpoint() const;
 
+    float get_direct_thrust() const;
+
+    void set_direct_thrust(float thrust);
+
     std::array<float, 4> get_motor_speeds();
 
     void yaw_raw_input(float input);
@@ -110,7 +114,9 @@ private:
     float absolute_altitude = 0.0f;
     const float g = 9.81;
 
-    const float max_angle = (45.0f / 180.0f) * M_PI;
+    float direct_thrust_value = 0.0f;
+
+    const float max_angle = (15.0f / 180.0f) * M_PI;
 
     Vector3 position_global{0.0f, 0.0f, 0.0f};
     Vector3 hover_setpoint{0.0f, 0.0f, 0.0f};
@@ -126,8 +132,8 @@ private:
     PID position_y_pid{1.0f, 0.01f, 0.1f, -1.0f, 1.0f};
 
     PID thrust_pid{0.5f, 0.001f, 0.01f, 0.0f, 1.0f};
-    PID pitch_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
-    PID roll_pid{0.1f, 0.0f, 0.01f, -1.0f, 1.0f};
+    PID pitch_pid{0.025f, 0.0f, 0.0005f, -1.0f, 1.0f, -0.025, 0.025};
+    PID roll_pid{0.025f, 0.0f, 0.0005f, -1.0f, 1.0f, -0.025, 0.025};
     PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
 
     Vector3 velocity_global{0.0f, 0.0f, 0.0f};

@@ -38,6 +38,7 @@ void DroneController::update(float dt) {
 void DroneController::control_update(float dt) {
     v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
 //    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+    v_thrust = direct_thrust_value;
     v_yaw = yaw_raw;
 
     if (controlState == ControlState::PointHover) {
@@ -52,25 +53,10 @@ void DroneController::control_update(float dt) {
         v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);
     }
 
-//    front_left->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
-//    front_right->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
-//    back_left->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
-//    back_right->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
-//
-//    back_right->set_speed(std::clamp(v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
-//    back_left->set_speed(std::clamp(v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
-//    front_right->set_speed(std::clamp(- v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
-//    front_left->set_speed(std::clamp(- v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
-
-    back_right->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
-    back_left->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
-    front_right->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
     front_left->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
-
-//    back_right->set_speed(std::clamp(v_pitch - v_roll, 0.0f, 1.0f));
-//    back_left->set_speed(std::clamp(v_pitch + v_roll, 0.0f, 1.0f));
-//    front_right->set_speed(std::clamp(- v_pitch - v_roll, 0.0f, 1.0f));
-//    front_left->set_speed(std::clamp(- v_pitch + v_roll, 0.0f, 1.0f));
+    front_right->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
+    back_left->set_speed(std::clamp(v_thrust + v_pitch + v_roll - v_yaw, 0.0f, 1.0f));
+    back_right->set_speed(std::clamp(v_thrust + v_pitch - v_roll + v_yaw, 0.0f, 1.0f));
 }
 
 
@@ -194,6 +180,14 @@ Rotation DroneController::get_rotation_setpoints() {
 
 float DroneController::get_altitude_setpoint() const {
     return altitude_setpoint;
+}
+
+float DroneController::get_direct_thrust() const {
+    return direct_thrust_value;
+}
+
+void DroneController::set_direct_thrust(float thrust) {
+    direct_thrust_value = std::clamp(thrust, 0.0f, 1.0f);
 }
 
 

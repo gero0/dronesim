@@ -123,6 +123,7 @@ void CommManager::prepareResponse() {
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
     const float altitude_const = 0.4;
+    const float thrust_const = 0.1;
     const float max_angle = (35.0f / 180.0f) * M_PI;
     const float yaw_constant = 0.1f;
 
@@ -168,11 +169,16 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 }
                 auto timestamp = xTaskGetTickCount();
                 if (timestamp > last_altitude_input) {
-                    last_altitude_input = timestamp;
-                    float altitude_sp = controller->get_altitude_setpoint();
-                    altitude_sp += alt_input * altitude_const;
+//                    last_altitude_input = timestamp;
+//                    float altitude_sp = controller->get_altitude_setpoint();
+//                    altitude_sp += alt_input * altitude_const;
                     xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                    controller->set_altitude(altitude_sp);
+//                    controller->set_altitude(altitude_sp);
+                    float thrust = controller->get_direct_thrust();
+//                    thrust += alt_input * altitude_const;
+                    thrust += alt_input * thrust_const;
+                    thrust = std::clamp(thrust, 0.0f, 1.0f);
+                    controller->set_direct_thrust(thrust);
                     xSemaphoreGive(controller_mutex);
                 }
             }
