@@ -59,6 +59,8 @@ I2C_HandleTypeDef hi2c1;
 DMA_HandleTypeDef hdma_i2c1_tx;
 DMA_HandleTypeDef hdma_i2c1_rx;
 
+IWDG_HandleTypeDef hiwdg;
+
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_tx;
 DMA_HandleTypeDef hdma_spi1_rx;
@@ -92,20 +94,30 @@ BLDCController motors[4] = {
         BLDCController{(uint16_t *)(&TIM1->CCR4), MOTOR_OFF, MOTOR_MIN, MOTOR_MAX},
 };
 
-[[noreturn]] void emergency_stop() {
-    //TODO: activate sound signal
-    while (true) {
-        for(int i=0; i<4; i++){
-            motors[i].lock();
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_10) {
+        //TODO: activate sound signal
+        while (true) {
+            HAL_IWDG_Refresh(&hiwdg);
+            for(int i=0; i<4; i++){
+                motors[i].lock();
+            }
+            HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+            HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+            for(size_t i=0; i < 10000000; i++){
+                __NOP();
+            }
         }
-        HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        rtos_delay(1000);
+    } else {
+        __NOP();
     }
 }
+void emergency_stop() {
+    __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_10);
+}
 
-DroneController controller(&motors[0], &motors[1], &motors[2], &motors[3], &ahrs);
+DroneController controller(&motors[3], &motors[0], &motors[2], &motors[1], &ahrs);
 SemaphoreHandle_t controller_mutex;
 CommManager* commManager;
 volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
@@ -124,6 +136,7 @@ static void MX_TIM11_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_IWDG_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -174,7 +187,7 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
   if(hi2c == &hi2c1) {
-    i2c_rx_complete_callback();
+    i2c_error_callback();
   }
 }
 
@@ -247,11 +260,13 @@ void init_motors() {
 
 [[noreturn]] void ControlTask(void* pvParameters) {
     init_motors();
+    MX_IWDG_Init();
     for(auto& motor : motors) {
         motor.enable();
     }
     uint32_t prev_time = xTaskGetTickCount();
     while (true) {
+        HAL_IWDG_Refresh(&hiwdg);
         vTaskDelay(1 / portTICK_RATE_MS);
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
         const uint32_t now = xTaskGetTickCount();
@@ -339,7 +354,11 @@ int main(void)
   MX_TIM10_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+    if (RCC->CSR & RCC_CSR_IWDGRSTF){
+        //clear reset flags
+        RCC->CSR |= RCC_CSR_RMVF;
+        emergency_stop();
+    }
     rtos_delay(1000);
     bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
     if (!ok) {
@@ -426,9 +445,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 16;
@@ -538,6 +558,34 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_16;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
