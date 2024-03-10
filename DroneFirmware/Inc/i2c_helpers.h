@@ -24,6 +24,8 @@ void i2c_tx_complete_callback();
 
 void i2c_rx_complete_callback();
 
+void i2c_error_callback();
+
 #ifdef __cplusplus
     }
 #endif
