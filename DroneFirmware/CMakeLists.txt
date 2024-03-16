@@ -111,8 +111,19 @@ add_executable(
 set_property(TARGET EXEC PROPERTY CXX_STANDARD 17)
 set_property(TARGET EXEC PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(EXEC PRIVATE -lc -lm -lnosys -llibmplmpu
-        DroneController_Lib Message_Lib Fusion VL5_Lib)
+target_link_directories(EXEC PRIVATE ./Drivers/CMSIS/Lib/GCC)
+
+target_link_libraries(EXEC PRIVATE
+        -lc
+        -lm
+        -lnosys
+        -llibmplmpu
+        arm_cortexM4lf_math.a
+        DroneController_Lib
+        Message_Lib
+        Fusion
+        VL5_Lib
+        )
 
 target_include_directories(
         EXEC
@@ -122,6 +133,7 @@ target_include_directories(
         Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
         Drivers/CMSIS/Device/ST/STM32F4xx/Include
         Drivers/CMSIS/Include
+        Drivers/CMSIS/DSP/Include
         MPU/driver/include
         MPU/driver/eMPL
         Middlewares/Third_Party/FreeRTOS/Source/include
