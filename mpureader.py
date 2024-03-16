@@ -2,23 +2,21 @@ import serial
 import struct
 from math import pi
 from os import system, name
-import curses
+# import curses
 from curses import wrapper
+import crcmod
 
+import csv
+
+frame_start = b'\xaa'
 
 def get_float(list):
     aa = bytearray(list)
     return struct.unpack('<f', aa)[0]
 
-
 def get_int(list):
     aa = bytearray(list)
     return struct.unpack('<I', aa)[0]
-
-
-def get_byte(list):
-    return list
-
 
 # define our clear function
 def clear():
@@ -31,49 +29,67 @@ def clear():
         _ = system('clear')
 
 
+def calculate_modbus_crc(data):
+    # Create a CRC-16 Modbus object
+    crc16 = crcmod.predefined.Crc('modbus')
+
+    # Update CRC with provided data
+    crc16.update(data)
+
+    # Get the calculated CRC value
+    crc_value = crc16.crcValue
+
+    # Modbus CRC is little-endian, so swap bytes
+    crc_bytes = crc_value.to_bytes(2, byteorder='little')
+
+    return crc_bytes
+
+
+
 def main(stdscr):
     state = "HEADER"
-    header = [11, 37]
-    header_pos = 0
-    ser = serial.Serial("/dev/ttyACM0", baudrate=115200)
+    ser = serial.Serial("/dev/ttyUSB0", baudrate=115200)
     stdscr.clear()
 
-    while (True):
-        if state == "HEADER":
-            s = ser.read(1)
-            b = list(s)[0]
-            if b == header[header_pos]:
-                header_pos += 1
-            else:
-                header_pos = 0
+    with open('acc.csv', 'w') as accfile:
+        with open('gyro.csv', 'w') as gyrofile:
+                accwriter = csv.writer(accfile)
+                gyrowriter = csv.writer(gyrofile)
+                accwriter.writerow(['X', 'Y', 'Z'])
+                gyrowriter.writerow(['PR', 'RR', 'YR'])
 
-            if header_pos >= len(header):
-                state = "PAYLOAD"
+                while (True):
+                    b = ser.read(1)
+                    if b != frame_start:
+                        continue
+                    frame_size = ser.read(1)[0]
+                    payload = ser.read(frame_size)
+                    crc = ser.read(2)
+                    verify_crc = calculate_modbus_crc(payload)
+                    if crc[0] == verify_crc[0] and crc[1] == verify_crc[1]:
+                        pass
+                    else:
+                        continue
 
-        else:
-            s = ser.read(62)
-            bytes = list(s)
-            # print(bytes)
-            # exit()
-            Pitch = get_float(bytes[0:4]) / 3.14 * 180
-            Yaw = get_float(bytes[4:8]) / 6.28 * 360
-            Roll = get_float(bytes[8:12]) / 3.14 * 180
-            X = get_float(bytes[12:16])
-            Y = get_float(bytes[16:20])
-            Z = get_float(bytes[20:24])
-            press_alt = get_float(bytes[24:28])
-            radar_alt = get_float(bytes[28:32])
+                    X = get_float(payload[0:4])
+                    Y = get_float(payload[4:8])
+                    Z = get_float(payload[8:12])
+                    Pitch = get_float(payload[12:16])
+                    Yaw = get_float(payload[16:20])
+                    Roll = get_float(payload[20:24])
+                    timestamp = get_int(payload[24:28])
 
-            stdscr.addstr(0, 0, f"X:{X:.2f} Y:{Y:.2f} Z:{Z:.2f}")
+                    accwriter.writerow([timestamp, X,Y,Z])
+                    gyrowriter.writerow([timestamp, Pitch,Roll,Yaw])
 
-            stdscr.addstr(1, 0, f"P:{Pitch:.2f} R:{Roll:.2f} Y:{Yaw:.2f}")
-            stdscr.addstr(2, 0,
-                          f"Alt.(P):{press_alt:.2f} Alt (R):{radar_alt:.2f}")
+                    stdscr.addstr(0, 0, f"time: {timestamp}")
 
-            stdscr.refresh()
+                    stdscr.addstr(1, 0, f"X:{X:.2f} Y:{Y:.2f} Z:{Z:.2f}")
 
-            header_pos = 0
-            state = "HEADER"
+                    stdscr.addstr(2, 0, f"PR:{Pitch:.2f} RR:{Roll:.2f} YR:{Yaw:.2f}")
+
+                    stdscr.refresh()
 
 
 wrapper(main)
+# main(None)
