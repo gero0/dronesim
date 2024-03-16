@@ -20,7 +20,7 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
 
-constexpr int AHRS_SAMPLE_RATE = 500;
+constexpr int AHRS_SAMPLE_RATE = 200;
 
 bool AHRS::init_hardware(I2C_HandleTypeDef* mpu_i2c, I2C_HandleTypeDef* qmc_i2c, I2C_HandleTypeDef* vl5_i2c,
                          I2C_HandleTypeDef* bme_i2c) {
@@ -47,7 +47,8 @@ bool AHRS::init_mpu(I2C_HandleTypeDef* mpu_i2c) {
     mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);
     mpu_set_accel_fsr(ACC_FSR);
     mpu_set_gyro_fsr(GYRO_FSR);
-    mpu_set_sample_rate(200);
+    mpu_set_sample_rate(1000);
+    mpu_set_lpf(20);
 
     return true;
 }
@@ -144,14 +145,16 @@ bme280_data AHRS::get_pressure(uint32_t period, bme280_dev* dev) {
     uint8_t status_reg;
     bme280_data comp_data{};
 
-    int8_t rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
+//    int8_t rslt = bme280_get_regs(BME280_REG_STATUS, &status_reg, 1, dev);
+//
+//    if (status_reg & BME280_STATUS_MEAS_DONE) {
+//        /* Measurement time delay given to read sample */
+//        //            dev->delay_us(period, dev->intf_ptr);
+//
+//        rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
+//    }
 
-    if (status_reg & BME280_STATUS_MEAS_DONE) {
-        /* Measurement time delay given to read sample */
-        //            dev->delay_us(period, dev->intf_ptr);
-
-        rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
-    }
+    int8_t rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
 
     return comp_data;
 }
@@ -193,64 +196,61 @@ void AHRS::update(float dt) {
     mpu_get_accel_reg(accel_raw, nullptr);
     accel_to_gs(accel_raw, accel_gs, ACC_FSR);
 
-    //    acc_samples[acc_i] = {accel_gs[1], accel_gs[0], -accel_gs[2]};
-    //    acc_i = (acc_i + 1) % averaging_len;
-    //    acceleration_current = {0, 0, 0};
-    //    for (auto acc_sample: acc_samples) {
-    //        acceleration_current += acc_sample;
-    //    }
-    //    acceleration_current /= averaging_len;
-
     mpu_get_gyro_reg(gyro_raw, nullptr);
     gyro_to_dps(gyro_raw, const_cast<float *>(gyro_dps), GYRO_FSR);
 
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
-//    gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
 
-    if (qmc_data_ready()) {
-        magnetometer = {
-            static_cast<float>(-qmc_get_y()), static_cast<float>(qmc_get_x()),
-            static_cast<float>(qmc_get_z())
-        };
-    }
+    int16_t temp[3];
+    qmc_read_all_axes(temp);
+    magnetometer = {
+            static_cast<float>(-temp[1]), static_cast<float>(temp[0]),
+            static_cast<float>(temp[2])
+    };
 
-    VL53L0X_RangingMeasurementData_t RangingMeasurementData;
-    uint8_t vl5_dataready = 0;
-    VL53L0X_GetMeasurementDataReady(Dev, &vl5_dataready);
-    if (vl5_dataready == 0x01) {
-        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
-        VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
-        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
-    }
+//    VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+//    uint8_t vl5_dataready = 0;
+//    VL53L0X_GetMeasurementDataReady(Dev, &vl5_dataready);
+//    if (vl5_dataready == 0x01) {
+////        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
+////        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
+//    }
 
     if(xTaskGetTickCount() - bme_timestamp >= (bme_period / 1000)){
         const double pressure = get_pressure(bme_period, &bme_dev).pressure;
-        //international barometric formula
-        //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
         const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-
-        if(alt > 0.0f && alt < 10000.0f) {
-            alt_samples[alt_samples_i] = alt;
-            alt_samples_i = (alt_samples_i + 1) % num_alt_samples;
-        }
-
-        double sum = 0.0;
-        for(double alt_sample : alt_samples){
-            sum += alt_sample;
-        }
-        sum /= num_alt_samples;
-
-        abs_altitude = static_cast<float>(sum);
+        abs_altitude = static_cast<float>(alt);
         bme_timestamp = xTaskGetTickCount();
     }
+//        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
+//        //international barometric formula
+//        //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
+//        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
+//
+//        if(alt > 0.0f && alt < 10000.0f) {
+//            alt_samples[alt_samples_i] = alt;
+//            alt_samples_i = (alt_samples_i + 1) % num_alt_samples;
+//        }
+//
+//        double sum = 0.0;
+//        for(double alt_sample : alt_samples){
+//            sum += alt_sample;
+//        }
+//        sum /= num_alt_samples;
+//
+//        abs_altitude = static_cast<float>(sum);
+//        bme_timestamp = xTaskGetTickCount();
+//    }
+//
+//    if(radar_altitude < 0.8f) {
+//        altitude = radar_altitude;
+//        base_altitude = abs_altitude - altitude;
+//    }else {
+//        altitude = abs_altitude - base_altitude;
+//    }
 
-    if(radar_altitude < 0.8f) {
-        altitude = radar_altitude;
-        base_altitude = abs_altitude - altitude;
-    }else {
-        altitude = abs_altitude - base_altitude;
-    }
+
 
 }
 

@@ -282,6 +282,7 @@ void init_motors() {
 
 [[noreturn]] void CommTask(void* pvParameters) {
     while (true) {
+        HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
         commManager->update();
     }
 
@@ -381,7 +382,7 @@ int main(void)
 
     xTaskCreate(CommTask, "CommTask", 300, NULL, 2, NULL);
     xTaskCreate(ControlTask, "ControlTask", 800, NULL, 3, NULL);
-    xTaskCreate(statusPrintTask, "statusPrintTask", 800, NULL, 1, NULL);
+//    xTaskCreate(statusPrintTask, "statusPrintTask", 800, NULL, 1, NULL);
     kernel_started = true;
     vTaskStartScheduler();
 
@@ -543,7 +544,8 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+//  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -722,7 +724,8 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 100-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 2000-1;
+//  htim10.Init.Period = 2000-1;
+  htim10.Init.Period = 5000-1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)

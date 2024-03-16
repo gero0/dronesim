@@ -154,7 +154,7 @@ target_include_directories(
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     message(STATUS "Maximum optimization for speed")
-    add_definitions(-DDEBUG)
+    add_definitions(-DDEBUG -Ofast)
 else ()
     message(STATUS "Building Debug")
     add_compile_options(-g -gdwarf-2)

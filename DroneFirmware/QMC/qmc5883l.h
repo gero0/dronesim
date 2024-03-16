@@ -60,6 +60,8 @@ int16_t qmc_get_y();
 
 int16_t qmc_get_z();
 
+void qmc_read_all_axes(int16_t out[3]);
+
 void qmc_set_oversampling(QMC_NumOfSamples samples);
 
 void qmc_set_output_rate(QMC_DataOutputRate dr);

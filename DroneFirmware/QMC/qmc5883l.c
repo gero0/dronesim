@@ -24,6 +24,15 @@ void qmc_read_register(uint16_t memaddr, uint8_t *data, uint16_t length) {
     i2c_receive_dma(i2c, (QMC_ADDR << 1) | 1, memaddr, 1, data, length);
 }
 
+//Can be used only with pointer rollover enabled!
+void qmc_read_all_axes(int16_t out[3]){
+    uint8_t buffer[8];
+    i2c_receive_dma(i2c, (QMC_ADDR << 1) | 1, QMC_DATA_X_LSB, 1, buffer, 6);
+    out[0] = (int16_t) (buffer[0]) | ((int16_t) (buffer[1]) << 8);
+    out[1] = (int16_t) (buffer[2]) | ((int16_t) (buffer[3]) << 8);
+    out[2] = (int16_t) (buffer[4]) | ((int16_t) (buffer[5]) << 8);
+}
+
 void qmc_delay_ms(uint16_t ms){
     rtos_delay(ms);
 }
