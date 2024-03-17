@@ -11,6 +11,7 @@
 #include <Fusion.h>
 #include "vl53l0x_api.h"
 #include "bme280.h"
+#include "arm_math.h"
 
 class AHRS : public SensorReader {
 public:
@@ -79,6 +80,33 @@ private:
     int alt_samples_i = 0;
 
     volatile bool vl5_dataready = false;
+
+    static constexpr int fir_block_size = 1;
+    static constexpr int fir_length = 32;
+
+    //FS = 200Hz, FC=30HZ FIR LPF
+    float32_t firCoeff[fir_length] = {
+            0.00146026f,  0.0017447f,   0.00043153f, -0.00291798f, -0.00608365f, -0.00407316f,
+            0.00576994f,  0.01735429f,  0.01686372f, -0.00500784f, -0.03819911f, -0.05165392f,
+            -0.01261744f,  0.08462113f,  0.20467264f,  0.28763488f,  0.28763488f,  0.20467264f,
+            0.08462113f, -0.01261744f, -0.05165392f, -0.03819911f, -0.00500784f,  0.01686372f,
+            0.01735429f,  0.00576994f, -0.00407316f, -0.00608365f, -0.00291798f,  0.00043153f,
+            0.0017447f,   0.00146026f,
+    };
+
+    arm_fir_instance_f32 gx_fir;
+    arm_fir_instance_f32 gy_fir;
+    arm_fir_instance_f32 gz_fir;
+    arm_fir_instance_f32 ax_fir;
+    arm_fir_instance_f32 ay_fir;
+    arm_fir_instance_f32 az_fir;
+
+    float32_t gx_fir_state[fir_block_size + fir_length - 1];
+    float32_t gy_fir_state[fir_block_size + fir_length - 1];
+    float32_t gz_fir_state[fir_block_size + fir_length - 1];
+    float32_t ax_fir_state[fir_block_size + fir_length - 1];
+    float32_t ay_fir_state[fir_block_size + fir_length - 1];
+    float32_t az_fir_state[fir_block_size + fir_length - 1];
 };
 
 #endif //DRONEFIRMWARE_AHRS_H

@@ -95,7 +95,7 @@ BLDCController motors[4] = {
 };
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if (GPIO_Pin == GPIO_PIN_10) {
+    if (GPIO_Pin == GPIO_PIN_14) {
         //TODO: activate sound signal
         while (true) {
             HAL_IWDG_Refresh(&hiwdg);
@@ -117,7 +117,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 }
 void emergency_stop() {
-    __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_10);
+    __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_14);
 }
 
 DroneController controller(&motors[3], &motors[0], &motors[2], &motors[1], &ahrs);
@@ -159,6 +159,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     /* USER CODE BEGIN Callback 1 */
     if (htim == &htim10) {
+        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
         ahrs.madgwick_update();
     }
     /* USER CODE END Callback 1 */
@@ -364,9 +365,7 @@ int main(void)
         emergency_stop();
     }
     rtos_delay(1000);
-    HAL_NVIC_DisableIRQ(EXTI15_15_IRQn);
     bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
-    HAL_NVIC_EnableIRQ(EXTI15_15_IRQn);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         emergency_stop();
@@ -549,7 +548,6 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-//  hi2c1.Init.ClockSpeed = 100000;
   hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
@@ -729,7 +727,6 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 100-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-//  htim10.Init.Period = 2000-1;
   htim10.Init.Period = 5000-1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -917,13 +914,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin BMP_IRQ_Pin
-                           VL5_IRQ_Pin */
-  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|BMP_IRQ_Pin
-                          |VL5_IRQ_Pin;
+  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin BMP_IRQ_Pin */
+  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|BMP_IRQ_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : VL5_IRQ_Pin */
+  GPIO_InitStruct.Pin = VL5_IRQ_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(VL5_IRQ_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);

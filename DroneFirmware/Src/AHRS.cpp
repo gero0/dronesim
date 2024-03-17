@@ -34,6 +34,13 @@ bool AHRS::init_hardware(I2C_HandleTypeDef* mpu_i2c, I2C_HandleTypeDef* qmc_i2c,
 
     initialized = result;
 
+    arm_fir_init_f32(&gx_fir, fir_length, &firCoeff[0], &gx_fir_state[0], fir_block_size);
+    arm_fir_init_f32(&gy_fir, fir_length, &firCoeff[0], &gy_fir_state[0], fir_block_size);
+    arm_fir_init_f32(&gz_fir, fir_length, &firCoeff[0], &gz_fir_state[0], fir_block_size);
+    arm_fir_init_f32(&ax_fir, fir_length, &firCoeff[0], &ax_fir_state[0], fir_block_size);
+    arm_fir_init_f32(&ay_fir, fir_length, &firCoeff[0], &ay_fir_state[0], fir_block_size);
+    arm_fir_init_f32(&az_fir, fir_length, &firCoeff[0], &az_fir_state[0], fir_block_size);
+
     return initialized;
 }
 
@@ -83,6 +90,8 @@ void AHRS::init_vl5(I2C_HandleTypeDef* vl5_i2c) const {
     VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
     VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
     VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+    VL53L0X_SetMeasurementTimingBudgetMicroSeconds(Dev, 30000);
+    VL53L0X_EnableInterruptMask(Dev, 1);
     VL53L0X_StartMeasurement(Dev);
 }
 
@@ -159,6 +168,19 @@ bme280_data AHRS::get_pressure(uint32_t period, bme280_dev* dev) {
 }
 
 void AHRS::madgwick_update() {
+    FusionVector  gyro_filtered;
+    FusionVector  acc_filtered;
+
+    arm_fir_f32(&gx_fir, &gyroscope.array[0], &gyro_filtered.array[0], fir_block_size);
+    arm_fir_f32(&gy_fir, &gyroscope.array[1], &gyro_filtered.array[1], fir_block_size);
+    arm_fir_f32(&gz_fir, &gyroscope.array[2], &gyro_filtered.array[2], fir_block_size);
+    arm_fir_f32(&ax_fir, &accelerometer.array[0], &acc_filtered.array[0], fir_block_size);
+    arm_fir_f32(&ay_fir, &accelerometer.array[1], &acc_filtered.array[1], fir_block_size);
+    arm_fir_f32(&az_fir, &accelerometer.array[2], &acc_filtered.array[2], fir_block_size);
+
+    gyroscope = gyro_filtered;
+    accelerometer = acc_filtered;
+
     FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
@@ -222,34 +244,13 @@ void AHRS::update(float dt) {
         abs_altitude = static_cast<float>(alt);
         bme_timestamp = xTaskGetTickCount();
     }
-//        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
-//        //international barometric formula
-//        //https://community.bosch-sensortec.com/t5/Question-and-answers/How-to-calculate-the-altitude-from-the-pressure-sensor-data/qaq-p/5702
-//        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-//
-//        if(alt > 0.0f && alt < 10000.0f) {
-//            alt_samples[alt_samples_i] = alt;
-//            alt_samples_i = (alt_samples_i + 1) % num_alt_samples;
-//        }
-//
-//        double sum = 0.0;
-//        for(double alt_sample : alt_samples){
-//            sum += alt_sample;
-//        }
-//        sum /= num_alt_samples;
-//
-//        abs_altitude = static_cast<float>(sum);
-//        bme_timestamp = xTaskGetTickCount();
-//    }
-//
+
     if(radar_altitude < 0.8f) {
         altitude = radar_altitude;
         base_altitude = abs_altitude - altitude;
     }else {
         altitude = abs_altitude - base_altitude;
     }
-
-
 
 }
 
