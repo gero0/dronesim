@@ -123,7 +123,7 @@ void CommManager::prepareResponse() {
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
     const float altitude_const = 0.4;
-    const float thrust_const = 0.1;
+    const float thrust_const = 0.05;
     const float max_angle = (35.0f / 180.0f) * M_PI;
     const float yaw_constant = 0.1f;
 
