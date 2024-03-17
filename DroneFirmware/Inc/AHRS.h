@@ -33,6 +33,7 @@ public:
 
     void update(float dt) override;
 
+    void vl5_ready();
 private:
     bool initialized = false;
     volatile float gyro_dps[3];
@@ -76,6 +77,8 @@ private:
     static constexpr int num_alt_samples = 4;
     double alt_samples[num_alt_samples];
     int alt_samples_i = 0;
+
+    volatile bool vl5_dataready = false;
 };
 
 #endif //DRONEFIRMWARE_AHRS_H

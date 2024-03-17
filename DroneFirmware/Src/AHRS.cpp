@@ -83,7 +83,6 @@ void AHRS::init_vl5(I2C_HandleTypeDef* vl5_i2c) const {
     VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
     VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
     VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
-
     VL53L0X_StartMeasurement(Dev);
 }
 
@@ -209,13 +208,13 @@ void AHRS::update(float dt) {
             static_cast<float>(temp[2])
     };
 
-//    VL53L0X_RangingMeasurementData_t RangingMeasurementData;
-//    uint8_t vl5_dataready = 0;
-//    VL53L0X_GetMeasurementDataReady(Dev, &vl5_dataready);
-//    if (vl5_dataready == 0x01) {
-////        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
-////        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
-//    }
+    if(vl5_dataready){
+        VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
+        VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
+        vl5_dataready = false;
+    }
 
     if(xTaskGetTickCount() - bme_timestamp >= (bme_period / 1000)){
         const double pressure = get_pressure(bme_period, &bme_dev).pressure;
@@ -243,12 +242,12 @@ void AHRS::update(float dt) {
 //        bme_timestamp = xTaskGetTickCount();
 //    }
 //
-//    if(radar_altitude < 0.8f) {
-//        altitude = radar_altitude;
-//        base_altitude = abs_altitude - altitude;
-//    }else {
-//        altitude = abs_altitude - base_altitude;
-//    }
+    if(radar_altitude < 0.8f) {
+        altitude = radar_altitude;
+        base_altitude = abs_altitude - altitude;
+    }else {
+        altitude = abs_altitude - base_altitude;
+    }
 
 
 
@@ -265,4 +264,8 @@ float AHRS::get_radar_altitude() {
 
 float AHRS::get_absolute_altitude() {
     return abs_altitude;
+}
+
+void AHRS::vl5_ready(){
+    vl5_dataready = true;
 }

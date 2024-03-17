@@ -109,7 +109,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
                 __NOP();
             }
         }
-    } else {
+    } else if (GPIO_Pin == GPIO_PIN_15) {
+        ahrs.vl5_ready();
+    }
+    else {
         __NOP();
     }
 }
@@ -361,7 +364,9 @@ int main(void)
         emergency_stop();
     }
     rtos_delay(1000);
+    HAL_NVIC_DisableIRQ(EXTI15_15_IRQn);
     bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
+    HAL_NVIC_EnableIRQ(EXTI15_15_IRQn);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         emergency_stop();
