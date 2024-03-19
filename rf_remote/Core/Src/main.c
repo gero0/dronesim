@@ -104,6 +104,11 @@ float yaw_sp = 0.0f;
 float roll_sp = 0.0f;
 float altitude_sp = 0.0f;
 
+float pitch_tunings[3];
+float roll_tunings[3];
+float yaw_tunings[3];
+float thrust_tunings[3];
+
 uint16_t adc_readings[4];
 
 bool connection_ok = false;
@@ -224,25 +229,29 @@ void update_display(){
 
 void update_values(Message msg) {
     switch (msg.type) {
-        case GetAltitude:
-            memcpy(&press_altitude, msg.data, sizeof(float));
-            memcpy(&radar_altitude, &msg.data[sizeof(float)], sizeof(float));
-            memcpy(&abs_altitude, &msg.data[2*sizeof(float)], sizeof(float));
-            break;
-        case GetAngles:
-            memcpy(angles, msg.data, sizeof(float) * 3);
-            break;
         case GetPosition:
-            memcpy(pos, msg.data, sizeof(float) * 3);
+            memcpy(angles, &msg.data[0], sizeof(float) * 3);
+            memcpy(&pos[0], &msg.data[12], sizeof(float));
+            memcpy(&pos[1], &msg.data[16], sizeof(float));
+            memcpy(&press_altitude, &msg.data[20], sizeof(float));
+            memcpy(&radar_altitude, &msg.data[24], sizeof(float));
             break;
         case GetStatus:
-            memcpy(motors, msg.data, sizeof(uint8_t) * 4);
+            memcpy(motors, &msg.data[0], sizeof(uint8_t) * 4);
+            memcpy(&altitude_sp, &msg.data[4], sizeof(float));
+            memcpy(&pitch_sp, &msg.data[8], sizeof(float));
+            memcpy(&yaw_sp, &msg.data[12], sizeof(float));
+            memcpy(&roll_sp, &msg.data[16], sizeof(float));
+            memcpy(&abs_altitude, &msg.data[20], sizeof(float));
             break;
-        case GetSetpoints:
-            memcpy(&pitch_sp, &msg.data[0], sizeof(float));
-            memcpy(&yaw_sp, &msg.data[4], sizeof(float));
-            memcpy(&roll_sp, &msg.data[8], sizeof(float));
-            memcpy(&altitude_sp, &msg.data[12], sizeof(float));
+        case GetTuningsPR:
+            memcpy(pitch_tunings, &msg.data[0], sizeof(uint8_t) * 3);
+            memcpy(roll_tunings, &msg.data[12], sizeof(uint8_t) * 3);
+            break;
+        case GetTuningsYT:
+            memcpy(yaw_tunings, &msg.data[0], sizeof(uint8_t) * 3);
+            memcpy(thrust_tunings, &msg.data[12], sizeof(uint8_t) * 3);
+            break;
         default:
             break;
     }
@@ -322,31 +331,50 @@ void delay_us(uint16_t us)
     }
 }
 
-Message create_angles_msg(){
+
+bool land_cmd_flag = false;
+bool estop_cmd_flag = false;
+bool hold_cmd_flag = false;
+bool rto_cmd_flag = false;
+
+uint8_t encode_commands(){
+    uint8_t commands = 0;
+    if(land_cmd_flag){
+        commands |= MSG_LAND_CMD;
+    }
+    if(estop_cmd_flag){
+        commands |= MSG_ESTOP_CMD;
+    }
+    if(hold_cmd_flag){
+        commands |= MSG_HOLD_CMD;
+    }
+    if(rto_cmd_flag){
+        commands |= MSG_RTO_CMD;
+    }
+
+    land_cmd_flag = false;
+    estop_cmd_flag = false;
+    hold_cmd_flag = false;
+    rto_cmd_flag = false;
+
+    return commands;
+}
+
+Message create_input_msg(){
     Message msg;
-    msg.type = AnglesInput;
-//    float yaw = 0.f;
+    msg.type = Input;
     float yaw = 0.983f - 2.0f * joy1_y;
     float pitch = 0.983f - 2.0f * joy0_y;
     float roll = 2.0f * joy0_x - 0.983f;
-    memcpy(&msg.data[0], &pitch, 4);
-    memcpy(&msg.data[4], &yaw, 4);
-    memcpy(&msg.data[8], &roll, 4);
-    return msg;
-}
-
-Message create_altitude_msg(){
-    Message msg;
-    msg.type = AltitudeInput;
     float alt = 2.0f * joy1_x - 0.983f;
-    memcpy(&msg.data[0], &alt, 4);
-    return msg;
-}
+    uint8_t commands = encode_commands();
 
-Message create_estop_msg(){
-    Message msg;
-    msg.type = EStopCommand;
-    memset(&msg.data, 0, 31);
+    memcpy(&msg.data[0], &pitch, sizeof(float));
+    memcpy(&msg.data[4], &yaw, sizeof(float));
+    memcpy(&msg.data[8], &roll, sizeof(float));
+    memcpy(&msg.data[12], &alt, sizeof(float));
+    memcpy(&msg.data[16], &commands, sizeof(uint8_t));
+
     return msg;
 }
 /* USER CODE END 0 */
@@ -408,17 +436,16 @@ int main(void)
 
     int stopButtonCounter = 0;
     const int stopButtonTreshold = 30000;
-    bool sendStopCommand = false;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-//    MessageType mt = GetAngles;
-    MessageType mt = AnglesInput;
 
-    const int msg_send_period = 80;
-    const int screen_update_period = 50;
+    MessageType mt = Input;
+
+    const int msg_send_period = 20;
+    const int screen_update_period = 100;
     size_t last_screen_update = 0;
 
     while (1) {
@@ -432,36 +459,13 @@ int main(void)
 
         if (current_time - last_msg_time > msg_send_period) {
             switch (mt) {
-                case AnglesInput:{
-                    Message msg = create_angles_msg();
+                case Input: {
+                    Message msg = create_input_msg();
                     queue_push(msg_queue, &msg);
-                }
-                    break;
-                case AltitudeInput: {
-                    Message msg = create_altitude_msg();
-                    queue_push(msg_queue, &msg);
-                }
-                    break;
-                case HoldCommand:
-                    //TODO
-                    break;
-                case RTOCommand:
-                    //TODO
-                    break;
-                case EStopCommand: {
-                    if(sendStopCommand){
-                        Message msg = create_estop_msg();
-                        queue_push(msg_queue, &msg);
-                    }
-                    sendStopCommand = false;
                 }
                     break;
                 default:
                     break;
-            }
-            mt++;
-            if (mt > RTOCommand){
-                mt = AnglesInput;
             }
             send_message(msg_queue);
         }
@@ -480,28 +484,9 @@ int main(void)
         }
 
         if(stopButtonCounter >= stopButtonTreshold){
-            sendStopCommand = true;
+            estop_cmd_flag = true;
         }
     }
-
-    //debug usb printing
-//        uint8_t usb_buffer[64];
-//        usb_buffer[0] = 11;
-//        usb_buffer[1] = 37;
-//        memcpy(usb_buffer + 2, angles, sizeof(angles));
-//        memcpy(usb_buffer + 14, pos, sizeof(pos));
-//        memcpy(usb_buffer + 26, &press_altitude, sizeof(press_altitude));
-//        memcpy(usb_buffer + 30, &radar_altitude, sizeof(radar_altitude));
-//        memcpy(usb_buffer + 34, &motors, sizeof(motors));
-//        uint32_t last_message_t = (uint32_t)last_msg_type;
-//        uint32_t last_response_t = (uint32_t)last_response_type;
-//        memcpy(usb_buffer + 38, &last_message_t, sizeof(last_message_t));
-//        memcpy(usb_buffer + 42, &last_response_t, sizeof(last_response_t));
-//        memcpy(usb_buffer + 46, &last_msg_time, sizeof(last_msg_time));
-//        memcpy(usb_buffer + 50, &last_response_time, sizeof(last_response_time));
-//        memcpy(usb_buffer + 54, &last_input_update, sizeof(last_input_update));
-//        memcpy(usb_buffer + 58, &current_time, sizeof(current_time));
-//        CDC_Transmit_FS(usb_buffer, 64);
 
     /* USER CODE END WHILE */
 

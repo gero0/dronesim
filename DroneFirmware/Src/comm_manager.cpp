@@ -53,60 +53,72 @@ bool CommManager::init_transceiver() {
 void CommManager::prepareResponse() {
     Message output_msg;
     switch (currentMsgType) {
-        case GetAngles: {
-            xSemaphoreTake(controller_mutex, portMAX_DELAY);
-            Rotation rot = controller->get_rotation();
-            xSemaphoreGive(controller_mutex);
-            output_msg.type = GetAngles;
-            memcpy(output_msg.data, &rot, sizeof(rot));
-        }
-        break;
         case GetPosition: {
             xSemaphoreTake(controller_mutex, portMAX_DELAY);
             Vector3 pos = controller->get_position();
-            xSemaphoreGive(controller_mutex);
-            output_msg.type = GetPosition;
-            memcpy(output_msg.data, &pos, sizeof(pos));
-        }
-        break;
-        case GetAltitude: {
-            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            Rotation rot = controller->get_rotation();
             float alt = controller->get_altitude();
             float radar = controller->get_radar_altitude();
-            float abs = controller->get_absolute_altitude();
             xSemaphoreGive(controller_mutex);
-            output_msg.type = GetAltitude;
-            memcpy(output_msg.data, &alt, sizeof(float));
-            memcpy(output_msg.data + sizeof(float), &radar, sizeof(float));
-            memcpy(output_msg.data + 2 * sizeof(float), &abs, sizeof(float));
+            output_msg.type = GetPosition;
+            memcpy(&output_msg.data[0], &rot.pitch, sizeof(float));
+            memcpy(&output_msg.data[4], &rot.yaw, sizeof(float));
+            memcpy(&output_msg.data[8], &rot.roll, sizeof(float));
+            memcpy(&output_msg.data[12], &pos.x, sizeof(float));
+            memcpy(&output_msg.data[16], &pos.y, sizeof(float));
+            memcpy(&output_msg.data[20], &alt, sizeof(float));
+            memcpy(&output_msg.data[24], &radar, sizeof(float));
         }
         break;
         case GetStatus: {
             xSemaphoreTake(controller_mutex, portMAX_DELAY);
             auto speeds = controller->get_motor_speeds();
+            auto setpoints = controller->get_setpoints();
+            float abs = controller->get_absolute_altitude();
             xSemaphoreGive(controller_mutex);
             uint8_t speeds_int[4];
             for (int i = 0; i < 4; i++) {
                 speeds_int[i] = static_cast<uint8_t>(speeds[i] * 100.0f);
             }
             output_msg.type = GetStatus;
-            memcpy(output_msg.data, speeds_int, sizeof(uint8_t) * 4);
+            memcpy(&output_msg.data[0], speeds_int, sizeof(uint8_t) * 4);
+            memcpy(&output_msg.data[4], &setpoints.v_thrust, sizeof(float));
+            memcpy(&output_msg.data[8], &setpoints.v_pitch, sizeof(float));
+            memcpy(&output_msg.data[12], &setpoints.v_yaw, sizeof(float));
+            memcpy(&output_msg.data[16], &setpoints.v_roll, sizeof(float));
+            memcpy(&output_msg.data[20], &abs, sizeof(float));
         }
         break;
-        case GetSetpoints: {
+        case GetTuningsPR:{
             xSemaphoreTake(controller_mutex, portMAX_DELAY);
-            auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
-            auto altitude_sp = controller->get_altitude_setpoint();
+            PidTunings Pitch = controller->get_pitch_tunings();
+            PidTunings Roll = controller->get_roll_tunings();
             xSemaphoreGive(controller_mutex);
-            output_msg.type = GetSetpoints;
-            memcpy(output_msg.data, &pitch, sizeof(float));
-            memcpy(output_msg.data + 4, &yaw, sizeof(float));
-            memcpy(output_msg.data + 8, &roll, sizeof(float));
-            memcpy(output_msg.data + 12, &altitude_sp, sizeof(float));
+            output_msg.type = GetTuningsPR;
+            memcpy(&output_msg.data[0], &Pitch.Kp, sizeof(float));
+            memcpy(&output_msg.data[4], &Pitch.Ki, sizeof(float));
+            memcpy(&output_msg.data[8], &Pitch.Kd, sizeof(float));
+            memcpy(&output_msg.data[12], &Roll.Kp, sizeof(float));
+            memcpy(&output_msg.data[16], &Roll.Ki, sizeof(float));
+            memcpy(&output_msg.data[20], &Roll.Kd, sizeof(float));
+        }
+            break;
+        case GetTuningsYT:{
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            PidTunings Yaw = controller->get_yaw_tunings();
+            PidTunings Thrust = controller->get_thrust_tunings();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetTuningsYT;
+            memcpy(&output_msg.data[0], &Yaw.Kp, sizeof(float));
+            memcpy(&output_msg.data[4], &Yaw.Ki, sizeof(float));
+            memcpy(&output_msg.data[8], &Yaw.Kd, sizeof(float));
+            memcpy(&output_msg.data[12], &Thrust.Kp, sizeof(float));
+            memcpy(&output_msg.data[16], &Thrust.Ki, sizeof(float));
+            memcpy(&output_msg.data[20], &Thrust.Kd, sizeof(float));
         }
             break;
         default:
-            currentMsgType = GetAngles;
+            currentMsgType = GetPosition;
             break;
     }
     uint8_t buffer[32];
@@ -114,8 +126,8 @@ void CommManager::prepareResponse() {
     nRF24_FlushTX();
     nRF24_WriteAckPayload(buffer, 32);
     currentMsgType = (MessageType)((int)(currentMsgType) + 1);
-    if(currentMsgType == (MessageType)(11)){
-        currentMsgType = GetAngles;
+    if(currentMsgType == (MessageType)(8)){
+        currentMsgType = GetPosition;
     }
 }
 
@@ -139,67 +151,91 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
         nRF24_ReadRXPaylaod(input_buffer, &read);
         Message msg = parse_message(input_buffer);
         switch (msg.type) {
-            case AnglesInput: {
+            case Input: {
                 float pitch_input = *(float *) (&msg.data[0]);
-                float yaw_input = *(float *) (&msg.data[sizeof(float)]);
-                float roll_input = *(float *) (&msg.data[2 * sizeof(float)]);
+                float yaw_input = *(float *) (&msg.data[4]);
+                float roll_input = *(float *) (&msg.data[8]);
+                float alt_input = *(float *) (&msg.data[12]);
+                uint8_t commands = *(uint8_t *) (&msg.data[16]);
 
                 pitch_input = std::clamp(pitch_input, -1.0f, 1.0f);
                 yaw_input = std::clamp(yaw_input, -1.0f, 1.0f);
                 roll_input = std::clamp(roll_input, -1.0f, 1.0f);
+                if( std::abs(alt_input) < 0.1){
+                    alt_input = 0;
+                }
+
+                auto timestamp = xTaskGetTickCount();
 
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
+
+                if(commands & MSG_LAND_CMD){
+                    //controller->auto_land();
+                }
+                if(commands & MSG_ESTOP_CMD){
+                    emergency_stop();
+                }
+                if(commands & MSG_HOLD_CMD){
+                    //controller->hold()
+                }
+                if(commands & MSG_RTO_CMD){
+                    //controller->RTO();
+                }
+
                 controller->set_pitch(pitch_input * max_angle);
                 controller->set_roll(roll_input * max_angle);
                 controller->yaw_raw_input(yaw_input);
-//                auto timestamp = xTaskGetTickCount();
+
 //                if (timestamp > last_angle_input) {
 //                    last_angle_input = timestamp;
 //                    auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
 //                    yaw = yaw + yaw_input * yaw_constant;
 //                    controller->set_yaw(yaw);
 //                }
-                xSemaphoreGive(controller_mutex);
-            }
-            break;
-            case AltitudeInput: {
-                float alt_input = *(float *) (&msg.data[0]);
-                if( std::abs(alt_input) < 0.1){
-                    break;
-                }
-                auto timestamp = xTaskGetTickCount();
+
                 if (timestamp > last_altitude_input) {
 //                    last_altitude_input = timestamp;
 //                    float altitude_sp = controller->get_altitude_setpoint();
 //                    altitude_sp += alt_input * altitude_const;
-                    xSemaphoreTake(controller_mutex, portMAX_DELAY);
 //                    controller->set_altitude(altitude_sp);
                     float thrust = controller->get_direct_thrust();
-//                    thrust += alt_input * altitude_const;
                     thrust += alt_input * thrust_const;
                     thrust = std::clamp(thrust, 0.0f, 1.0f);
                     controller->set_direct_thrust(thrust);
-                    xSemaphoreGive(controller_mutex);
                 }
+                xSemaphoreGive(controller_mutex);
+            }
+            break;
+            case DataRequest:
+                //RESERVED
+                break;
+            case SetTuningsPR: {
+                float Pkp = *(float *) (&msg.data[0]);
+                float Pki = *(float *) (&msg.data[4]);
+                float Pkd = *(float *) (&msg.data[8]);
+                float Rkp = *(float *) (&msg.data[12]);
+                float Rki = *(float *) (&msg.data[16]);
+                float Rkd = *(float *) (&msg.data[20]);
+
+                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                controller->set_pitch_tunings({Pkp, Pki, Pkd});
+                controller->set_roll_tunings({Rkp, Rki, Rkd});
+                xSemaphoreGive(controller_mutex);
             }
                 break;
-            case HoldCommand:
+            case SetTuningsYT: {
+                float Ykp = *(float *) (&msg.data[0]);
+                float Yki = *(float *) (&msg.data[4]);
+                float Ykd = *(float *) (&msg.data[8]);
+                float Tkp = *(float *) (&msg.data[12]);
+                float Tki = *(float *) (&msg.data[16]);
+                float Tkd = *(float *) (&msg.data[20]);
+
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->hover();
+                controller->set_yaw_tunings({Ykp, Yki, Ykd});
+                controller->set_thrust_tunings({Tkp, Tki, Tkd});
                 xSemaphoreGive(controller_mutex);
-                break;
-            case RTOCommand:
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->RTO();
-                xSemaphoreGive(controller_mutex);
-                break;
-            case EStopCommand:
-                emergency_stop();
-                break;
-            case LandCommand:
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-//                controller->auto_land();
-                xSemaphoreGive(controller_mutex);
+            }
                 break;
             default:
                 break;

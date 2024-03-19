@@ -45,7 +45,7 @@ private:
     bool waitTXTimeout(uint32_t timeout);
     void emergency_stop();
     void prepareResponse();
-    MessageType currentMsgType = GetAngles;
+    MessageType currentMsgType = GetPosition;
 
     DroneController *controller;
     SemaphoreHandle_t controller_mutex;

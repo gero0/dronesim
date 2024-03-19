@@ -8,18 +8,20 @@ extern "C" {
 #include <stdint.h>
 #define MSG_DATA_SIZE 31
 
+#define MSG_LAND_CMD 1
+#define MSG_ESTOP_CMD 2
+#define MSG_HOLD_CMD 4
+#define MSG_RTO_CMD 8
+
 typedef enum MessageType {
-    AnglesInput = 0,
-    AltitudeInput = 1,
-    LandCommand = 2,
-    EStopCommand = 3,
-    HoldCommand = 4,
-    RTOCommand = 5,
-    GetAngles = 6,
-    GetPosition = 7,
-    GetAltitude = 8,
-    GetStatus = 9,
-    GetSetpoints = 10,
+    Input = 0,
+    DataRequest = 1,
+    SetTuningsPR = 2,
+    SetTuningsYT = 3,
+    GetPosition = 4,
+    GetStatus = 5,
+    GetTuningsPR = 6,
+    GetTuningsYT = 7,
 } MessageType;
 
 typedef struct Message {
