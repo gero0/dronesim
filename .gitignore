@@ -1,3 +1,12 @@
-cmake-*
+**/cmake-build-debug/*
+**/cmake-build-release/*
+**/build/*
 .idea
+.vscode
+DataVis
 VL53L0X
+*.jpg
+*.pdf
+*.csv
+*.dat
+**/.cache

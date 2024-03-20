@@ -61,6 +61,7 @@ add_executable(EXEC
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c
         Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c
+        Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c
         Core/Src/system_stm32f1xx.c
         startup_stm32f103xb.s
         Core/Src/debouncer.c Core/Inc/debouncer.h)
