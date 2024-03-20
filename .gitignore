@@ -5,6 +5,8 @@
 .vscode
 DataVis
 VL53L0X
+nmea_test
+DroneFirmware_old
 *.jpg
 *.pdf
 *.csv
