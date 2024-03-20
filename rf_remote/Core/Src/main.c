@@ -29,6 +29,7 @@
 #include "message.h"
 #include "lcd.h"
 #include "debouncer.h"
+#include "crc16.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -112,20 +113,6 @@ float thrust_tunings[3];
 uint16_t adc_readings[4];
 
 bool connection_ok = false;
-
-//int __io_putchar(int ch) {
-////    CDC_Transmit_FS((uint8_t *) &ch, 1);
-//    return ch;
-//}
-
-//int _write(int file, char *ptr, int len) {
-//    int DataIdx;
-//
-//    for (DataIdx = 0; DataIdx < len; DataIdx++) {
-//        __io_putchar(*ptr++);
-//    }
-//    return len;
-//}
 
 float to_degrees(float a){
     return a / 3.14f * 180.0f;
@@ -377,6 +364,55 @@ Message create_input_msg(){
 
     return msg;
 }
+
+Message create_settuningsPR_message(float pitch_tunings[3], float roll_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsPR;
+    memcpy(&msg.data[0], pitch_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], roll_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+Message create_settuningsYT_message(float yaw_tunings[3], float thrust_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsYT;
+    memcpy(&msg.data[0], yaw_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], thrust_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+void send_update_via_serial(){
+    uint8_t buffer[126];
+    buffer[0] = 0b10101010;
+    buffer[1] = 0;
+    buffer[2] = 120;
+    memcpy(&buffer[3], angles, sizeof(float) * 3);
+    memcpy(&buffer[15], pos, sizeof(float) * 2);
+    memcpy(&buffer[23], &press_altitude, sizeof(float));
+    memcpy(&buffer[27], &radar_altitude, sizeof(float));
+    memcpy(&buffer[31], &abs_altitude, sizeof(float));
+    memcpy(&buffer[35], &pitch_sp, sizeof(float));
+    memcpy(&buffer[39], &yaw_sp, sizeof(float));
+    memcpy(&buffer[43], &roll_sp, sizeof(float));
+    memcpy(&buffer[47], &altitude_sp, sizeof(float));
+    memcpy(&buffer[51], &motors, sizeof(uint8_t) * 4);
+    memcpy(&buffer[55], &pitch_tunings, sizeof(float) * 3);
+    memcpy(&buffer[67], &roll_tunings, sizeof(float) * 3);
+    memcpy(&buffer[79], &yaw_tunings, sizeof(float) * 3);
+    memcpy(&buffer[91], &thrust_tunings, sizeof(float) * 3);
+    memcpy(&buffer[103], &last_response_time, sizeof(size_t));
+    memcpy(&buffer[107], &joy0_x, sizeof(float));
+    memcpy(&buffer[111], &joy0_y, sizeof(float));
+    memcpy(&buffer[115], &joy1_x, sizeof(float));
+    memcpy(&buffer[119], &joy1_y, sizeof(float));
+    buffer[123] = 0; //Reserved
+    uint16_t crc = crc16(&buffer[3], 121);
+    buffer[124] = (uint8_t)(crc);
+    buffer[125] = (uint8_t)(crc >> 8);
+
+//    HAL_UART_Transmit();
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -432,7 +468,6 @@ int main(void)
     //Init LCD display
     LCD_init(delay_us);
     LCD_clear();
-    LCD_write_text("oh no", 5);
 
     int stopButtonCounter = 0;
     const int stopButtonTreshold = 30000;
@@ -441,8 +476,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-    MessageType mt = Input;
 
     const int msg_send_period = 20;
     const int screen_update_period = 100;
@@ -458,15 +491,8 @@ int main(void)
         }
 
         if (current_time - last_msg_time > msg_send_period) {
-            switch (mt) {
-                case Input: {
-                    Message msg = create_input_msg();
-                    queue_push(msg_queue, &msg);
-                }
-                    break;
-                default:
-                    break;
-            }
+            Message msg = create_input_msg();
+            queue_push(msg_queue, &msg);
             send_message(msg_queue);
         }
 
@@ -486,6 +512,8 @@ int main(void)
         if(stopButtonCounter >= stopButtonTreshold){
             estop_cmd_flag = true;
         }
+
+        send_update_via_serial();
     }
 
     /* USER CODE END WHILE */

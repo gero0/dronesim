@@ -35,6 +35,7 @@ add_compile_options(
 )
 
 add_subdirectory(../Message Message)
+add_subdirectory(../crc16 crc16)
 
 add_executable(EXEC
         NRF/nRF24.c
@@ -80,6 +81,7 @@ target_link_options(EXEC PRIVATE
 
 target_link_libraries(EXEC PRIVATE
         Message_Lib
+        crc16_Lib
         -lc
         -lm
         -lnosys
@@ -102,6 +104,7 @@ target_include_directories(EXEC PRIVATE
         MPU/driver/eMPL
         ../DroneController/src
         ../Message/Inc
+        ../crc16
         )
 
 add_compile_options(-Os)
