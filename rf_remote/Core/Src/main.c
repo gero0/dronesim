@@ -235,12 +235,12 @@ void update_values(Message msg) {
             memcpy(&abs_altitude, &msg.data[20], sizeof(float));
             break;
         case GetTuningsPR:
-            memcpy(pitch_tunings, &msg.data[0], sizeof(uint8_t) * 3);
-            memcpy(roll_tunings, &msg.data[12], sizeof(uint8_t) * 3);
+            memcpy(pitch_tunings, &msg.data[0], sizeof(float) * 3);
+            memcpy(roll_tunings, &msg.data[12], sizeof(float) * 3);
             break;
         case GetTuningsYT:
-            memcpy(yaw_tunings, &msg.data[0], sizeof(uint8_t) * 3);
-            memcpy(thrust_tunings, &msg.data[12], sizeof(uint8_t) * 3);
+            memcpy(yaw_tunings, &msg.data[0], sizeof(float) * 3);
+            memcpy(thrust_tunings, &msg.data[12], sizeof(float) * 3);
             break;
         default:
             break;
@@ -388,7 +388,7 @@ void send_update_via_serial(){
     uint8_t buffer[126];
     buffer[0] = 0b10101010;
     buffer[1] = 0;
-    buffer[2] = 120;
+    buffer[2] = 121;
     memcpy(&buffer[3], angles, sizeof(float) * 3);
     memcpy(&buffer[15], pos, sizeof(float) * 2);
     memcpy(&buffer[23], &press_altitude, sizeof(float));
@@ -413,7 +413,7 @@ void send_update_via_serial(){
     buffer[124] = (uint8_t)(crc);
     buffer[125] = (uint8_t)(crc >> 8);
 
-//    HAL_UART_Transmit();
+    HAL_UART_Transmit(&huart3, buffer, 126, HAL_MAX_DELAY);
 }
 
 /* USER CODE END 0 */
