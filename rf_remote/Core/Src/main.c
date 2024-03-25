@@ -76,6 +76,22 @@ static void MX_USART3_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+enum ReceiveState{
+    RxHeader,
+    RxType,
+    RxLength,
+    RxReceiving,
+    RxReceived
+};
+
+enum ReceiveState rx_state;
+uint8_t recv_byte;
+uint8_t rx_buffer[255];
+size_t rx_buffer_index = 0;
+uint8_t rx_type = 0;
+uint8_t rx_len = 0;
+
 Debouncer sw1_debouncer;
 Debouncer sw_stop_debouncer;
 
@@ -112,6 +128,16 @@ float pitch_tunings[3];
 float roll_tunings[3];
 float yaw_tunings[3];
 float thrust_tunings[3];
+
+float received_pitch_tunings[3];
+float received_roll_tunings[3];
+float received_yaw_tunings[3];
+float received_thrust_tunings[3];
+
+bool land_cmd_flag = false;
+bool estop_cmd_flag = false;
+bool hold_cmd_flag = false;
+bool rto_cmd_flag = false;
 
 uint16_t adc_readings[4];
 
@@ -217,6 +243,118 @@ void update_display(){
     LCD_write_text(buffer2, strlen(buffer2));
 }
 
+uint8_t encode_commands(){
+    uint8_t commands = 0;
+    if(land_cmd_flag){
+        commands |= MSG_LAND_CMD;
+    }
+    if(estop_cmd_flag){
+        commands |= MSG_ESTOP_CMD;
+    }
+    if(hold_cmd_flag){
+        commands |= MSG_HOLD_CMD;
+    }
+    if(rto_cmd_flag){
+        commands |= MSG_RTO_CMD;
+    }
+
+    land_cmd_flag = false;
+    estop_cmd_flag = false;
+    hold_cmd_flag = false;
+    rto_cmd_flag = false;
+
+    return commands;
+}
+
+
+Message create_input_msg(){
+    Message msg;
+    msg.type = Input;
+    float yaw = 0.983f - 2.0f * joy1_y;
+    float pitch = 0.983f - 2.0f * joy0_y;
+    float roll = 2.0f * joy0_x - 0.983f;
+    float alt = 2.0f * joy1_x - 0.983f;
+    uint8_t commands = encode_commands();
+
+    memcpy(&msg.data[0], &pitch, sizeof(float));
+    memcpy(&msg.data[4], &yaw, sizeof(float));
+    memcpy(&msg.data[8], &roll, sizeof(float));
+    memcpy(&msg.data[12], &alt, sizeof(float));
+    memcpy(&msg.data[16], &commands, sizeof(uint8_t));
+
+    return msg;
+}
+
+Message create_settuningsPR_message(float pitch_tunings[3], float roll_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsPR;
+    memcpy(&msg.data[0], pitch_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], roll_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+Message create_settuningsYT_message(float yaw_tunings[3], float thrust_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsYT;
+    memcpy(&msg.data[0], yaw_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], thrust_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+void receive_byte(uint8_t byte){
+    switch(rx_state){
+        case RxHeader:
+            if(byte == 0b10101010){
+                rx_state = RxType;
+            }
+            break;
+        case RxType:
+            rx_type = byte;
+            rx_state = RxLength;
+        break;
+        case RxLength:
+            rx_len = byte;
+            rx_state = RxReceiving;
+            break;
+        case RxReceiving:
+            rx_buffer[rx_buffer_index] = byte;
+            if(rx_buffer_index >= rx_len + 2){
+                rx_state = RxReceived;
+            }
+            rx_buffer_index++;
+            break;
+        case RxReceived:
+            break;
+    }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if(huart == &huart3){
+        receive_byte(recv_byte);
+        HAL_UART_Receive_IT(&huart3, &recv_byte, 1);
+    }
+}
+
+void parse_uart_input(Queue *queue){
+    uint16_t crc = (uint16_t)(rx_buffer[rx_len]) | (uint16_t)(rx_buffer[rx_len+1] << 8);
+    uint16_t verify_crc = crc16(rx_buffer, rx_len);
+    if(crc == verify_crc){
+        memcpy(received_pitch_tunings, &rx_buffer[0], sizeof(float) * 3);
+        memcpy(received_roll_tunings, &rx_buffer[12], sizeof(float) * 3);
+        memcpy(received_yaw_tunings, &rx_buffer[24], sizeof(float) * 3);
+        memcpy(received_thrust_tunings, &rx_buffer[36], sizeof(float) * 3);
+        Message pr = create_settuningsPR_message(received_pitch_tunings, received_roll_tunings);
+        Message yt = create_settuningsYT_message(received_yaw_tunings, received_thrust_tunings);
+        queue_push(queue, &pr);
+        queue_push(queue, &yt);
+    }
+    rx_state = RxHeader;
+    rx_len = 0;
+    rx_type = 0;
+    rx_buffer_index = 0;
+}
+
 void update_values(Message msg) {
     switch (msg.type) {
         case GetPosition:
@@ -302,6 +440,9 @@ void send_message(Queue *queue) {
             init_transceiver();
             nRF24_FlushTX();
             nRF24_FlushRX();
+            while(!queue_empty(queue)){
+                queue_pop(queue);
+            }
         }
 
         last_msg_time = HAL_GetTick();
@@ -319,69 +460,6 @@ void delay_us(uint16_t us)
     while (htim3.Instance->CNT <= us) {
         //wait
     }
-}
-
-
-bool land_cmd_flag = false;
-bool estop_cmd_flag = false;
-bool hold_cmd_flag = false;
-bool rto_cmd_flag = false;
-
-uint8_t encode_commands(){
-    uint8_t commands = 0;
-    if(land_cmd_flag){
-        commands |= MSG_LAND_CMD;
-    }
-    if(estop_cmd_flag){
-        commands |= MSG_ESTOP_CMD;
-    }
-    if(hold_cmd_flag){
-        commands |= MSG_HOLD_CMD;
-    }
-    if(rto_cmd_flag){
-        commands |= MSG_RTO_CMD;
-    }
-
-    land_cmd_flag = false;
-    estop_cmd_flag = false;
-    hold_cmd_flag = false;
-    rto_cmd_flag = false;
-
-    return commands;
-}
-
-Message create_input_msg(){
-    Message msg;
-    msg.type = Input;
-    float yaw = 0.983f - 2.0f * joy1_y;
-    float pitch = 0.983f - 2.0f * joy0_y;
-    float roll = 2.0f * joy0_x - 0.983f;
-    float alt = 2.0f * joy1_x - 0.983f;
-    uint8_t commands = encode_commands();
-
-    memcpy(&msg.data[0], &pitch, sizeof(float));
-    memcpy(&msg.data[4], &yaw, sizeof(float));
-    memcpy(&msg.data[8], &roll, sizeof(float));
-    memcpy(&msg.data[12], &alt, sizeof(float));
-    memcpy(&msg.data[16], &commands, sizeof(uint8_t));
-
-    return msg;
-}
-
-Message create_settuningsPR_message(float pitch_tunings[3], float roll_tunings[3]){
-    Message msg;
-    msg.type = SetTuningsPR;
-    memcpy(&msg.data[0], pitch_tunings, sizeof(float) * 3);
-    memcpy(&msg.data[12], roll_tunings, sizeof(float) * 3);
-    return msg;
-}
-
-Message create_settuningsYT_message(float yaw_tunings[3], float thrust_tunings[3]){
-    Message msg;
-    msg.type = SetTuningsYT;
-    memcpy(&msg.data[0], yaw_tunings, sizeof(float) * 3);
-    memcpy(&msg.data[12], thrust_tunings, sizeof(float) * 3);
-    return msg;
 }
 
 void send_update_via_serial(){
@@ -453,6 +531,7 @@ int main(void)
   MX_TIM4_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+    HAL_UART_Receive_IT (&huart3, &recv_byte, 1);
     sw1_debouncer = db_init(JOY1_SW_GPIO_Port, JOY1_SW_Pin, true, 5);
     sw_stop_debouncer = db_init(BTN_0_GPIO_Port, BTN_0_Pin, false, 5);
     
@@ -462,7 +541,7 @@ int main(void)
 
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
 
-    Queue *msg_queue = queue_create(100, sizeof(Message));
+    Queue *msg_queue = queue_create(10, sizeof(Message));
 
     HAL_ADC_Start_DMA(&hadc1, (uint32_t *) adc_readings, 4);
 
@@ -488,6 +567,10 @@ int main(void)
     while (1) {
         check_inputs();
         size_t current_time = HAL_GetTick();
+
+        if(rx_state == RxReceived){
+            parse_uart_input(msg_queue);
+        }
 
         if(current_time - last_screen_update >= screen_update_period){
             update_display();
