@@ -62,6 +62,12 @@ public:
 
     void level();
 
+    bool is_stopped();
+
+    void start();
+
+    bool stop();
+
     void hover();
 
     void RTO();
@@ -97,6 +103,8 @@ public:
 private:
     SensorReader *sensor_reader;
 
+    bool is_stopped_v = false;
+
     const float yaw_raw_constant = 0.1;
     float yaw_raw = 0.0f;
     float yaw_setpoint = 0.0f;
@@ -131,9 +139,9 @@ private:
     PID position_x_pid{1.0f, 0.01f, 0.1f, -1.0f, 1.0f};
     PID position_y_pid{1.0f, 0.01f, 0.1f, -1.0f, 1.0f};
 
-    PID thrust_pid{0.5f, 0.001f, 0.01f, 0.0f, 1.0f};
-    PID pitch_pid{0.025f, 0.0f, 0.002f, -1.0f, 1.0f, -0.025, 0.025};
-    PID roll_pid{0.025f, 0.0f, 0.002f, -1.0f, 1.0f, -0.025, 0.025};
+    PID thrust_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    PID pitch_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
+    PID roll_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
     PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
 
     Vector3 velocity_global{0.0f, 0.0f, 0.0f};

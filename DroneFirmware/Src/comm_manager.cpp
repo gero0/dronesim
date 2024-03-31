@@ -30,7 +30,7 @@ void CommManager::update() {
             break;
 
         case CommState::Error:
-            emergency_stop();
+            emergency_stop(4);
             break;
     }
 }
@@ -135,7 +135,7 @@ void CommManager::prepareResponse() {
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
     const float altitude_const = 0.4;
-    const float thrust_const = 0.05;
+    const float thrust_const = 0.01;
     const float max_angle = (35.0f / 180.0f) * M_PI;
     const float yaw_constant = 0.1f;
 
@@ -173,13 +173,24 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                     //controller->auto_land();
                 }
                 if(commands & MSG_ESTOP_CMD){
-                    emergency_stop();
+                    emergency_stop(5);
                 }
                 if(commands & MSG_HOLD_CMD){
                     //controller->hold()
                 }
                 if(commands & MSG_RTO_CMD){
                     //controller->RTO();
+                }
+                if(commands & MSG_STOP_CMD){
+                    //controller->RTO();
+                    if(timestamp - last_stop_cmd_received >= stop_cmd_threshold){
+                        if(controller->is_stopped()){
+                            controller->start();
+                        }else{
+                            controller->stop();
+                        }
+                        last_stop_cmd_received = timestamp;
+                    }
                 }
 
                 controller->set_pitch(pitch_input * max_angle);
@@ -244,7 +255,7 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, static_cast<GPIO_PinState>(0));
     }
      if (xTaskGetTickCount() - *last_contact_time > connlost_threshold) {
-         emergency_stop();
+         emergency_stop(6);
      }
     return CommState::Listen;
 }
@@ -261,9 +272,9 @@ bool CommManager::waitTXTimeout(uint32_t timeout) {
     return false;
 }
 
-void CommManager::emergency_stop(){
+void CommManager::emergency_stop(uint8_t code){
     if(stop_function != nullptr){
-        stop_function();
+        stop_function(code);
     }else{
         while(1){
             //freeze here

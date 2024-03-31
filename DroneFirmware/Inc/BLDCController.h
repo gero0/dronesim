@@ -16,9 +16,9 @@ public:
     void set_speed(float speed) override;
     float get_speed() override;
 
-    void disable();
-    void enable();
-    bool is_enabled() const;
+    void disable() override;
+    void enable() override;
+    bool is_enabled() override;
     void lock();
 private:
     bool enabled = false;

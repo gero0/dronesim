@@ -30,7 +30,7 @@ class CommManager {
 public:
     CommManager(
             DroneController *controller, SemaphoreHandle_t controller_mutex,
-            SPI_HandleTypeDef *nrf_spi_handle, std::function<void()> stop_function = nullptr)
+            SPI_HandleTypeDef *nrf_spi_handle, std::function<void(uint8_t)> stop_function = nullptr)
             : controller(controller), controller_mutex(controller_mutex),
             nrf_spi_handle(nrf_spi_handle), stop_function(std::move(stop_function))
             {
@@ -43,18 +43,20 @@ public:
 private:
     bool init_transceiver();
     bool waitTXTimeout(uint32_t timeout);
-    void emergency_stop();
+    void emergency_stop(uint8_t code);
     void prepareResponse();
     MessageType currentMsgType = GetPosition;
 
     DroneController *controller;
     SemaphoreHandle_t controller_mutex;
-    std::function<void()> stop_function;
+    std::function<void(uint8_t)> stop_function;
     SPI_HandleTypeDef *nrf_spi_handle;
 
     CommState comm_state = CommState::Init;
     Vector3 position_of_last_contact = {0.0f, 0.0f, 0.0f};
     TickType_t last_contact_time = xTaskGetTickCount();
+    TickType_t last_stop_cmd_received = 0;
+    TickType_t stop_cmd_threshold = 1000;
 };
 
 

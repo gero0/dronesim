@@ -36,7 +36,7 @@ HAL_StatusTypeDef i2c_master_transmit_dma(I2C_HandleTypeDef* hi2c, uint16_t DevA
     error = false;
 //    finished = false;
 //    HAL_StatusTypeDef result = HAL_I2C_Master_Transmit_DMA(hi2c, DevAddress, pData, Size);
-    HAL_StatusTypeDef result = HAL_I2C_Master_Transmit(hi2c, DevAddress, pData, Size, HAL_MAX_DELAY);
+    HAL_StatusTypeDef result = HAL_I2C_Master_Transmit(hi2c, DevAddress, pData, Size, 2);
 //    while (!finished && !error) {
 //        rtos_delay(1);
 //    }
@@ -47,7 +47,7 @@ HAL_StatusTypeDef i2c_master_receive_dma(I2C_HandleTypeDef* hi2c, uint16_t DevAd
     error = false;
 //    finished = false;
 //    HAL_StatusTypeDef result = HAL_I2C_Master_Receive_DMA(hi2c, DevAddress, pData, Size);
-    HAL_StatusTypeDef result = HAL_I2C_Master_Receive(hi2c, DevAddress, pData, Size, HAL_MAX_DELAY);
+    HAL_StatusTypeDef result = HAL_I2C_Master_Receive(hi2c, DevAddress, pData, Size, 2);
 //    while (!finished && !error) {
 //        rtos_delay(1);
 //    }

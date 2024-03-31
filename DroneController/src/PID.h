@@ -35,6 +35,8 @@ public:
 
     void set_Kd(float Kd);
 
+    void reset();
+
 private:
     float last_value = 0.0f;
     float iTerm = 0.0f;

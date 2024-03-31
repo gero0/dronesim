@@ -83,7 +83,9 @@ const osThreadAttr_t defaultTask_attributes = {
 
 constexpr uint16_t MOTOR_OFF = 490;
 constexpr uint16_t MOTOR_MIN = 530;
-constexpr uint16_t MOTOR_MAX = 1000;
+constexpr uint16_t MOTOR_MAX = 850;
+
+uint8_t emergency_code=0;
 
 AHRS ahrs;
 // MotorDriverMock motor_mocks[4];
@@ -116,7 +118,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
         __NOP();
     }
 }
-void emergency_stop() {
+void emergency_stop(uint8_t err) {
+    emergency_code = err;
     __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_14);
 }
 
@@ -265,9 +268,9 @@ void init_motors() {
 [[noreturn]] void ControlTask(void* pvParameters) {
     init_motors();
     MX_IWDG_Init();
-    for(auto& motor : motors) {
-        motor.enable();
-    }
+//    for(auto& motor : motors) {
+//        motor.enable();
+//    }
     uint32_t prev_time = xTaskGetTickCount();
     while (true) {
         HAL_IWDG_Refresh(&hiwdg);
@@ -362,18 +365,18 @@ int main(void)
     if (RCC->CSR & RCC_CSR_IWDGRSTF){
         //clear reset flags
         RCC->CSR |= RCC_CSR_RMVF;
-        emergency_stop();
+        emergency_stop(1);
     }
     rtos_delay(1000);
     bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
-        emergency_stop();
+        emergency_stop(2);
     }
     ok = ahrs.calibrate();
     if (!ok) {
         printf("MPU Calibration Error!\r\n");
-        emergency_stop();
+        emergency_stop(3);
     }
 
     controller_mutex = xSemaphoreCreateMutex();

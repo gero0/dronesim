@@ -138,6 +138,7 @@ bool land_cmd_flag = false;
 bool estop_cmd_flag = false;
 bool hold_cmd_flag = false;
 bool rto_cmd_flag = false;
+bool stop_cmd_flag = false;
 
 uint16_t adc_readings[4];
 
@@ -257,11 +258,15 @@ uint8_t encode_commands(){
     if(rto_cmd_flag){
         commands |= MSG_RTO_CMD;
     }
+    if(stop_cmd_flag){
+        commands |= MSG_STOP_CMD;
+    }
 
     land_cmd_flag = false;
     estop_cmd_flag = false;
     hold_cmd_flag = false;
     rto_cmd_flag = false;
+    stop_cmd_flag = false;
 
     return commands;
 }
@@ -534,7 +539,7 @@ int main(void)
     HAL_UART_Receive_IT (&huart3, &recv_byte, 1);
     sw1_debouncer = db_init(JOY1_SW_GPIO_Port, JOY1_SW_Pin, true, 5);
     sw_stop_debouncer = db_init(BTN_0_GPIO_Port, BTN_0_Pin, false, 5);
-    
+
     HAL_Delay(1000);
 
     init_transceiver();
@@ -552,8 +557,8 @@ int main(void)
     LCD_init(delay_us);
     LCD_clear();
 
-    int stopButtonCounter = 0;
-    const int stopButtonTreshold = 30000;
+    int estopButtonCounter = 0;
+    const int estopButtonTreshold = 50;
 
   /* USER CODE END 2 */
 
@@ -591,12 +596,13 @@ int main(void)
         }
 
         if (db_is_pressed(&sw_stop_debouncer)){
-            stopButtonCounter++;
+            stop_cmd_flag = true;
+            estopButtonCounter++;
         }else{
-            stopButtonCounter = 0;
+            estopButtonCounter = 0;
         }
 
-        if(stopButtonCounter >= stopButtonTreshold){
+        if(estopButtonCounter >= estopButtonTreshold){
             estop_cmd_flag = true;
         }
 

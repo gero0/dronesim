@@ -122,6 +122,43 @@ void DroneController::set_yaw_tunings(PidTunings tunings) {
     yaw_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
 }
 
+bool DroneController::is_stopped() {
+    return is_stopped_v;
+}
+
+void DroneController::start(){
+    thrust_pid.reset();
+    roll_pid.reset();
+    pitch_pid.reset();
+    yaw_pid.reset();
+
+    front_left->enable();
+    front_right->enable();
+    back_right->enable();
+    back_left->enable();
+
+    is_stopped_v = false;
+}
+
+bool DroneController::stop(){
+    //TODO: altitude check
+
+    direct_thrust_value = 0;
+    front_left->disable();
+    front_right->disable();
+    back_right->disable();
+    back_left->disable();
+
+    thrust_pid.reset();
+    roll_pid.reset();
+    pitch_pid.reset();
+    yaw_pid.reset();
+
+    is_stopped_v = true;
+
+    return true;
+}
+
 void DroneController::level() {
     roll_setpoint = 0.0f;
     pitch_setpoint = 0.0f;

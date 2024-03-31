@@ -12,6 +12,11 @@ void PID::set_tunings(float p, float i, float d){
     this->Kd = d;
 }
 
+void PID::reset() {
+    this->iTerm = 0;
+//    this->last_value = 0;
+}
+
 void PID::set_windup(float min, float max){
     this->windupMin = min;
     this->windupMax = max;
