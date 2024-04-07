@@ -361,6 +361,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM10_Init();
   MX_USART2_UART_Init();
+//  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
     if (RCC->CSR & RCC_CSR_IWDGRSTF){
         //clear reset flags
@@ -385,7 +386,7 @@ int main(void)
     //start UART communication with GPS module
     HAL_UART_Receive_IT(&huart1, &uart_recv_byte, 1);
     //start updating madgwick filter in regular intervals
-    HAL_TIM_Base_Start_IT(&htim10);
+//    HAL_TIM_Base_Start_IT(&htim10);
 
     xTaskCreate(CommTask, "CommTask", 300, NULL, 2, NULL);
     xTaskCreate(ControlTask, "ControlTask", 800, NULL, 3, NULL);
@@ -730,7 +731,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 100-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 5000-1;
+  htim10.Init.Period = 1250-1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -917,10 +918,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin BMP_IRQ_Pin */
-  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|BMP_IRQ_Pin;
+  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin */
+  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : VL5_IRQ_Pin */

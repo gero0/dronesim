@@ -9,6 +9,16 @@
 extern "C"{
 #endif
 
+HAL_StatusTypeDef i2c_transmit(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint16_t MemAddress,
+                                   uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
+
+HAL_StatusTypeDef i2c_receive(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint16_t MemAddress,
+                                  uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
+
+HAL_StatusTypeDef i2c_master_transmit(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint8_t* pData, uint16_t Size);
+
+HAL_StatusTypeDef i2c_master_receive(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint8_t* pData, uint16_t Size);
+
 
 HAL_StatusTypeDef i2c_transmit_dma(I2C_HandleTypeDef* hi2c, uint16_t DevAddress, uint16_t MemAddress,
                                    uint16_t MemAddSize, uint8_t* pData, uint16_t Size);

@@ -76,9 +76,6 @@ void rtos_delay(uint32_t ms);
 #define QMC_IRQ_Pin GPIO_PIN_13
 #define QMC_IRQ_GPIO_Port GPIOB
 #define QMC_IRQ_EXTI_IRQn EXTI15_10_IRQn
-#define BMP_IRQ_Pin GPIO_PIN_14
-#define BMP_IRQ_GPIO_Port GPIOB
-#define BMP_IRQ_EXTI_IRQn EXTI15_10_IRQn
 #define VL5_IRQ_Pin GPIO_PIN_15
 #define VL5_IRQ_GPIO_Port GPIOB
 #define VL5_IRQ_EXTI_IRQn EXTI15_10_IRQn

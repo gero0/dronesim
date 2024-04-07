@@ -16,7 +16,7 @@ void mpu_interface_register(I2C_HandleTypeDef *i2c) {
 
 unsigned long f103_i2c_write(uint8_t addr, uint8_t reg, uint8_t len, uint8_t* data){
     addr = addr << 1;
-    if(i2c_transmit_dma(hi2c, (uint16_t)addr, (uint16_t)reg, 1, data, len) != HAL_OK){
+    if(i2c_transmit(hi2c, (uint16_t)addr, (uint16_t)reg, 1, data, len) != HAL_OK){
         return 1;
     }
     return 0;
@@ -24,7 +24,7 @@ unsigned long f103_i2c_write(uint8_t addr, uint8_t reg, uint8_t len, uint8_t* da
 
 unsigned long f103_i2c_read(uint8_t addr, uint8_t reg, uint8_t len, uint8_t* data){
     addr = addr << 1;
-    if(i2c_receive_dma(hi2c, (uint16_t)addr, (uint16_t)reg, 1, data, len) != HAL_OK){
+    if(i2c_receive(hi2c, (uint16_t)addr, (uint16_t)reg, 1, data, len) != HAL_OK){
         return 1;
     }
     return 0;

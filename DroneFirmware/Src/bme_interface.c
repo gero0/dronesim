@@ -9,7 +9,7 @@ static uint8_t dev_addr = (0x76 << 1);
 static I2C_HandleTypeDef *i2c = NULL;
 
 BME280_INTF_RET_TYPE bme280_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, void *intf_ptr) {
-    HAL_StatusTypeDef res = i2c_receive_dma(i2c, dev_addr, reg_addr, 1, reg_data, length);
+    HAL_StatusTypeDef res = i2c_receive(i2c, dev_addr, reg_addr, 1, reg_data, length);
     if (res != HAL_OK)
         return BME280_E_COMM_FAIL;
 
@@ -17,7 +17,7 @@ BME280_INTF_RET_TYPE bme280_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32
 }
 
 BME280_INTF_RET_TYPE bme280_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, void *intf_ptr) {
-    HAL_StatusTypeDef res = i2c_transmit_dma(i2c, dev_addr, reg_addr, 1, reg_data, length);
+    HAL_StatusTypeDef res = i2c_transmit(i2c, dev_addr, reg_addr, 1, reg_data, length);
     if (res != HAL_OK)
         return BME280_E_COMM_FAIL;
 
