@@ -38,6 +38,8 @@ public:
 
     void vl5_ready();
 
+    void qmc_ready();
+
 private:
     bool initialized = false;
     volatile float gyro_dps[3];
@@ -71,7 +73,10 @@ private:
     float base_altitude = 0.0f;
     float radar_altitude = 0.0f;
 
-    static bool init_mpu(I2C_HandleTypeDef *mpu_i2c);
+    long accel_bias[3];
+    long gyro_bias[3];
+
+    bool init_mpu(I2C_HandleTypeDef *mpu_i2c);
 
     void init_fusion();
 
@@ -85,6 +90,7 @@ private:
     double alt_samples[num_alt_samples];
 
     volatile bool vl5_dataready = false;
+    volatile bool qmc_dataready = false;
 
     static constexpr int fir_block_size = 1;
     static constexpr int fir_length = 64;

@@ -111,7 +111,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
                 __NOP();
             }
         }
-    } else if (GPIO_Pin == GPIO_PIN_15) {
+    }
+    else if (GPIO_Pin == QMC_IRQ_Pin) {
+        ahrs.qmc_ready();
+    }
+    else if (GPIO_Pin == VL5_IRQ_Pin) {
         ahrs.vl5_ready();
     }
     else {
@@ -552,6 +556,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
+//  hi2c1.Init.ClockSpeed = 333000;
   hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
@@ -731,7 +736,7 @@ static void MX_TIM10_Init(void)
   htim10.Instance = TIM10;
   htim10.Init.Prescaler = 100-1;
   htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 1250-1;
+  htim10.Init.Period = 5000-1;
   htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
@@ -918,14 +923,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin */
-  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin PB14 */
+  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

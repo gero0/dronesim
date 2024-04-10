@@ -55,8 +55,6 @@ bool AHRS::init_mpu(I2C_HandleTypeDef *mpu_i2c) {
     mpu_set_accel_fsr(ACC_FSR);
     mpu_set_gyro_fsr(GYRO_FSR);
     mpu_set_sample_rate(1000);
-    mpu_set_lpf(20);
-
     return true;
 }
 
@@ -129,8 +127,6 @@ bool AHRS::calibrate() {
     if (!initialized) {
         return false;
     }
-    long accel_bias[3];
-    long gyro_bias[3];
 
     if (const int result = mpu_run_self_test(gyro_bias, accel_bias); result != 0x7) {
         return false;
@@ -220,13 +216,15 @@ void AHRS::update(float dt) {
     accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
     gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
 
-    int16_t temp[3];
-    qmc_read_all_axes(temp);
-    magnetometer = {
-            static_cast<float>(-temp[1]), static_cast<float>(temp[0]),
-            static_cast<float>(temp[2])
-    };
-
+    if(qmc_dataready){
+        int16_t temp[3];
+        qmc_read_all_axes(temp);
+        magnetometer = {
+                static_cast<float>(-temp[1]), static_cast<float>(temp[0]),
+                static_cast<float>(temp[2])
+        };
+        qmc_dataready = false;
+    }
 
     if (xTaskGetTickCount() - bme_timestamp >= 100) {
         const double pressure = get_pressure(bme_period, &bme_dev).pressure;
@@ -268,4 +266,8 @@ float AHRS::get_absolute_altitude() {
 
 void AHRS::vl5_ready() {
     vl5_dataready = true;
+}
+
+void AHRS::qmc_ready() {
+    qmc_dataready = true;
 }
