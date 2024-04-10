@@ -103,18 +103,56 @@ void CommManager::prepareResponse() {
             memcpy(&output_msg.data[20], &Roll.Kd, sizeof(float));
         }
             break;
-        case GetTuningsYT:{
+        case GetTuningsYA:{
             xSemaphoreTake(controller_mutex, portMAX_DELAY);
             PidTunings Yaw = controller->get_yaw_tunings();
-            PidTunings Thrust = controller->get_thrust_tunings();
+            PidTunings Thrust = controller->get_altitude_tunings();
             xSemaphoreGive(controller_mutex);
-            output_msg.type = GetTuningsYT;
+            output_msg.type = GetTuningsYA;
             memcpy(&output_msg.data[0], &Yaw.Kp, sizeof(float));
             memcpy(&output_msg.data[4], &Yaw.Ki, sizeof(float));
             memcpy(&output_msg.data[8], &Yaw.Kd, sizeof(float));
             memcpy(&output_msg.data[12], &Thrust.Kp, sizeof(float));
             memcpy(&output_msg.data[16], &Thrust.Ki, sizeof(float));
             memcpy(&output_msg.data[20], &Thrust.Kd, sizeof(float));
+        }
+            break;
+        case GetTuningsPrRr:{
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            PidTunings pr = controller->get_pitch_rate_tunings();
+            PidTunings rr = controller->get_roll_rate_tunings();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetTuningsPrRr;
+            memcpy(&output_msg.data[0], &pr.Kp, sizeof(float));
+            memcpy(&output_msg.data[4], &pr.Ki, sizeof(float));
+            memcpy(&output_msg.data[8], &pr.Kd, sizeof(float));
+            memcpy(&output_msg.data[12], &rr.Kp, sizeof(float));
+            memcpy(&output_msg.data[16], &rr.Ki, sizeof(float));
+            memcpy(&output_msg.data[20], &rr.Kd, sizeof(float));
+        }
+            break;
+        case GetTuningsYrVs:{
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            PidTunings yr = controller->get_yaw_rate_tunings();
+            PidTunings vs = controller->get_vs_tunings();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetTuningsYrVs;
+            memcpy(&output_msg.data[0], &yr.Kp, sizeof(float));
+            memcpy(&output_msg.data[4], &yr.Ki, sizeof(float));
+            memcpy(&output_msg.data[8], &yr.Kd, sizeof(float));
+            memcpy(&output_msg.data[12], &vs.Kp, sizeof(float));
+            memcpy(&output_msg.data[16], &vs.Ki, sizeof(float));
+            memcpy(&output_msg.data[20], &vs.Kd, sizeof(float));
+        }
+            break;
+        case GetRates:{
+            xSemaphoreTake(controller_mutex, portMAX_DELAY);
+            Rotation rates = controller->get_angular_rates();
+            float vs = controller->get_vertical_speed();
+            xSemaphoreGive(controller_mutex);
+            output_msg.type = GetRates;
+            memcpy(&output_msg.data[0], &rates, sizeof(float) * 3);
+            memcpy(&output_msg.data[12], &vs, sizeof(float));
         }
             break;
         default:
@@ -125,9 +163,17 @@ void CommManager::prepareResponse() {
     serialize_msg(buffer, &output_msg);
     nRF24_FlushTX();
     nRF24_WriteAckPayload(buffer, 32);
+
     currentMsgType = (MessageType)((int)(currentMsgType) + 1);
-    if(currentMsgType == (MessageType)(8)){
-        currentMsgType = GetPosition;
+    if(response_state == ResponseState::Basic){
+        if(currentMsgType == (MessageType)(9)){
+            currentMsgType = GetPosition;
+        }
+    }else{
+        if(currentMsgType == (MessageType)(13)){
+            currentMsgType = GetPosition;
+            response_state = ResponseState::Basic;
+        }
     }
 }
 
@@ -135,8 +181,8 @@ void CommManager::prepareResponse() {
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
     const TickType_t connlost_threshold = 3000;
     const float altitude_const = 0.4;
-    const float thrust_const = 0.01;
-    const float max_angle = (35.0f / 180.0f) * M_PI;
+    const float thrust_const = 0.025;
+    const float max_angle = (20.0f / 180.0f) * M_PI;
     const float yaw_constant = 0.1f;
 
     static TickType_t last_angle_input;
@@ -218,7 +264,7 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
             }
             break;
             case DataRequest:
-                //RESERVED
+                response_state = ResponseState::Full;
                 break;
             case SetTuningsPR: {
                 float Pkp = *(float *) (&msg.data[0]);
@@ -234,7 +280,7 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 xSemaphoreGive(controller_mutex);
             }
                 break;
-            case SetTuningsYT: {
+            case SetTuningsYA: {
                 float Ykp = *(float *) (&msg.data[0]);
                 float Yki = *(float *) (&msg.data[4]);
                 float Ykd = *(float *) (&msg.data[8]);
@@ -244,7 +290,35 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
 
                 xSemaphoreTake(controller_mutex, portMAX_DELAY);
                 controller->set_yaw_tunings({Ykp, Yki, Ykd});
-                controller->set_thrust_tunings({Tkp, Tki, Tkd});
+                controller->set_altitude_tunings({Tkp, Tki, Tkd});
+                xSemaphoreGive(controller_mutex);
+            }
+                break;
+            case SetTuningsPrRr: {
+                float Prkp = *(float *) (&msg.data[0]);
+                float Prki = *(float *) (&msg.data[4]);
+                float Prkd = *(float *) (&msg.data[8]);
+                float Rrkp = *(float *) (&msg.data[12]);
+                float Rrki = *(float *) (&msg.data[16]);
+                float Rrkd = *(float *) (&msg.data[20]);
+
+                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                controller->set_pitch_rate_tunings({Prkp, Prki, Prkd});
+                controller->set_roll_rate_tunings({Rrkp, Rrki, Rrkd});
+                xSemaphoreGive(controller_mutex);
+            }
+                break;
+            case SetTuningsYrVs: {
+                float Yrkp = *(float *) (&msg.data[0]);
+                float Yrki = *(float *) (&msg.data[4]);
+                float Yrkd = *(float *) (&msg.data[8]);
+                float Vskp = *(float *) (&msg.data[12]);
+                float Vski = *(float *) (&msg.data[16]);
+                float Vskd = *(float *) (&msg.data[20]);
+
+                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+                controller->set_yaw_rate_tunings({Yrkp, Yrki, Yrkd});
+                controller->set_vs_tunings({Vskp, Vski, Vskd});
                 xSemaphoreGive(controller_mutex);
             }
                 break;

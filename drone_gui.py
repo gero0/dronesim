@@ -54,7 +54,7 @@ class DroneData:
     Pitch_sp: float = 0
     Yaw_sp: float = 0
     Roll_sp: float = 0
-    Thrust_sp: float = 0
+    Altitude_sp: float = 0
     motors : list = field(default_factory=list) 
     pitch_Kp : float = 0
     pitch_Ki : float = 0
@@ -65,14 +65,30 @@ class DroneData:
     yaw_Kp : float = 0
     yaw_Ki : float = 0
     yaw_Kd : float = 0
-    thrust_Kp : float = 0
-    thrust_Ki : float = 0
-    thrust_Kd : float = 0
+    altitude_Kp : float = 0
+    altitude_Ki : float = 0
+    altitude_Kd : float = 0
     last_response_time : int = 0
     joy0x : float = 0
     joy0y : float = 0
     joy1x : float = 0
     joy1y : float = 0
+    pitch_rate_Kp : float = 0
+    pitch_rate_Ki : float = 0
+    pitch_rate_Kd : float = 0
+    roll_rate_Kp : float = 0
+    roll_rate_Ki : float = 0
+    roll_rate_Kd : float = 0
+    yaw_rate_Kp : float = 0
+    yaw_rate_Ki : float = 0
+    yaw_rate_Kd : float = 0
+    vs_Kp : float = 0
+    vs_Ki : float = 0
+    vs_Kd : float = 0
+    pitch_rate : float = 0
+    yaw_rate : float = 0
+    roll_rate : float = 0
+    vertical_speed : float = 0
 
 class DataReader:
 
@@ -96,8 +112,8 @@ class DataReader:
         if crc[0] == verify_crc[0] and crc[1] == verify_crc[1]:
             pass
         else:
-            print("CRC ERROR")
-            return
+            print("CRC ERROR\n Received: {} Calculated: {} Received array: {} \nOf len {}".format(crc, verify_crc, payload, len(payload)))
+            return None
 
         self.dd.Pitch = get_float(payload[0:4])
         self.dd.Yaw = get_float(payload[4:8])
@@ -110,7 +126,7 @@ class DataReader:
         self.dd.Pitch_sp = get_float(payload[32:36])
         self.dd.Yaw_sp = get_float(payload[36:40])
         self.dd.Roll_sp = get_float(payload[40:44])
-        self.dd.Thrust_sp = get_float(payload[44:48])
+        self.dd.Altitude_sp = get_float(payload[44:48])
         self.dd.motors = [get_byte(payload[48]), get_byte(payload[49]), get_byte(payload[50]), get_byte(payload[51])]
         self.dd.pitch_Kp = get_float(payload[52: 56])
         self.dd.pitch_Ki = get_float(payload[56: 60])
@@ -121,14 +137,30 @@ class DataReader:
         self.dd.yaw_Kp = get_float(payload[76: 80])
         self.dd.yaw_Ki = get_float(payload[80: 84])
         self.dd.yaw_Kd = get_float(payload[84: 88])
-        self.dd.thrust_Kp = get_float(payload[88: 92])
-        self.dd.thrust_Ki = get_float(payload[92: 96])
-        self.dd.thrust_Kd = get_float(payload[96: 100])
+        self.dd.altitude_Kp = get_float(payload[88: 92])
+        self.dd.altitude_Ki = get_float(payload[92: 96])
+        self.dd.altitude_Kd = get_float(payload[96: 100])
         self.dd.last_response_time = get_int(payload[100: 104])
         self.dd.joy0x = get_float(payload[104: 108])
         self.dd.joy0y = get_float(payload[108: 112])
         self.dd.joy1x = get_float(payload[112: 116])
         self.dd.joy1y = get_float(payload[116: 120])
+        self.dd.pitch_rate_Kp = get_float(payload[120: 124])
+        self.dd.pitch_rate_Ki = get_float(payload[124: 128])
+        self.dd.pitch_rate_Kd = get_float(payload[128: 132])
+        self.dd.roll_rate_Kp = get_float(payload[132: 136])
+        self.dd.roll_rate_Ki = get_float(payload[136: 140])
+        self.dd.roll_rate_Kd = get_float(payload[140: 144])
+        self.dd.yaw_rate_Kp = get_float(payload[144: 148])
+        self.dd.yaw_rate_Ki = get_float(payload[148: 152])
+        self.dd.yaw_rate_Kd = get_float(payload[152: 156])
+        self.dd.vs_Kp = get_float(payload[156: 160])
+        self.dd.vs_Ki = get_float(payload[160: 164])
+        self.dd.vs_Kd = get_float(payload[164: 168])
+        self.dd.pitch_rate = get_float(payload[168: 172])
+        self.dd.yaw_rate = get_float(payload[172: 176])
+        self.dd.roll_rate = get_float(payload[176: 180])
+        self.dd.vertical_speed = get_float(payload[180: 184])
 
         return self.dd
     
@@ -149,7 +181,8 @@ class Worker(QObject):
                 self.data_reader.write(self.tx_queue.pop())
         
             dd= self.data_reader.read_message()
-            self.progressed.emit(dd)
+            if dd is not None:
+                self.progressed.emit(dd)
 
         self.finished.emit()
     
@@ -158,7 +191,11 @@ class Worker(QObject):
             new_dd.pitch_Kp, new_dd.pitch_Ki, new_dd.pitch_Kd,
             new_dd.roll_Kp, new_dd.roll_Ki, new_dd.roll_Kd,
             new_dd.yaw_Kp, new_dd.yaw_Ki, new_dd.yaw_Kd,
-            new_dd.thrust_Kp, new_dd.thrust_Ki, new_dd.thrust_Kd,
+            new_dd.altitude_Kp, new_dd.altitude_Ki, new_dd.altitude_Kd,
+            new_dd.pitch_rate_Kp, new_dd.pitch_rate_Ki, new_dd.pitch_rate_Kd,
+            new_dd.roll_rate_Kp, new_dd.roll_rate_Ki, new_dd.roll_rate_Kd,
+            new_dd.yaw_rate_Kp, new_dd.yaw_rate_Ki, new_dd.yaw_rate_Kd,
+            new_dd.vs_Kp, new_dd.vs_Ki, new_dd.vs_Kd,
         ]
         payload_buf = bytes()
         for val in payload:
@@ -169,8 +206,15 @@ class Worker(QObject):
         print(message)
         self.tx_queue.append(message)
 
+    def data_request(self):
+        message = bytes([0b10101010, 1, 0, 0, 0])
+        print(message)
+        self.tx_queue.append(message)
+
 class MainWindow(QMainWindow):
     update_tunings= pyqtSignal(DroneData)
+    data_request_signal= pyqtSignal()
+
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -199,6 +243,7 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self.reader_thread.quit)
         # self.update_tunings.connect(self.worker.update_tunings)
         self.update_tunings.connect(self.workerproxy)
+        self.data_request_signal.connect(self.workerproxy_dr)
 
         self.reader_thread.start()
         self.reset_pid_tunings()
@@ -206,9 +251,32 @@ class MainWindow(QMainWindow):
     def workerproxy(self, dd):
         self.worker.update_tunings(dd)
 
+    def workerproxy_dr(self):
+        self.worker.data_request()
+
+    def data_request(self):
+        self.data_request_signal.emit()
+
     def apply_pid_tunings(self):
         try:
             dd = DroneData()
+
+            dd.pitch_rate_Kp = float(self.pitch_rate_Kp_input.text())
+            dd.pitch_rate_Ki = float(self.pitch_rate_Ki_input.text())
+            dd.pitch_rate_Kd = float(self.pitch_rate_Kd_input.text())
+
+            dd.roll_rate_Kp = float(self.roll_rate_Kp_input.text())
+            dd.roll_rate_Ki = float(self.roll_rate_Ki_input.text())
+            dd.roll_rate_Kd = float(self.roll_rate_Kd_input.text())
+
+            dd.yaw_rate_Kp = float(self.yaw_rate_Kp_input.text())
+            dd.yaw_rate_Ki = float(self.yaw_rate_Ki_input.text())
+            dd.yaw_rate_Kd = float(self.yaw_rate_Kd_input.text())
+
+            dd.vs_Kp = float(self.vs_Kp_input.text())
+            dd.vs_Ki = float(self.vs_Ki_input.text())
+            dd.vs_Kd = float(self.vs_Kd_input.text())
+
             dd.pitch_Kp = float(self.pitch_Kp_input.text())
             dd.pitch_Ki = float(self.pitch_Ki_input.text())
             dd.pitch_Kd = float(self.pitch_Kd_input.text())
@@ -221,15 +289,35 @@ class MainWindow(QMainWindow):
             dd.yaw_Ki = float(self.yaw_Ki_input.text())
             dd.yaw_Kd = float(self.yaw_Kd_input.text())
 
-            dd.thrust_Kp = float(self.thrust_Kp_input.text())
-            dd.thrust_Ki = float(self.thrust_Ki_input.text())
-            dd.thrust_Kd = float(self.thrust_Kd_input.text())
+            dd.altitude_Kp = float(self.altitude_Kp_input.text())
+            dd.altitude_Ki = float(self.altitude_Ki_input.text())
+            dd.altitude_Kd = float(self.altitude_Kd_input.text())
 
             self.update_tunings.emit(dd)
+            time.sleep(0.35)
+            self.update_tunings.emit(dd)
+            time.sleep(0.35)
+            self.data_request_signal.emit()
         except:
             print("Invalid input data")
 
     def reset_pid_tunings(self):
+        self.pitch_rate_Kp_input.setText(f"{self.dd.pitch_rate_Kp:.5f}")
+        self.pitch_rate_Ki_input.setText(f"{self.dd.pitch_rate_Ki:.5f}")
+        self.pitch_rate_Kd_input.setText(f"{self.dd.pitch_rate_Kd:.5f}")
+
+        self.roll_rate_Kp_input.setText(f"{self.dd.roll_rate_Kp:.5f}")
+        self.roll_rate_Ki_input.setText(f"{self.dd.roll_rate_Ki:.5f}")
+        self.roll_rate_Kd_input.setText(f"{self.dd.roll_rate_Kd:.5f}")
+
+        self.yaw_rate_Kp_input.setText(f"{self.dd.yaw_rate_Kp:.5f}")
+        self.yaw_rate_Ki_input.setText(f"{self.dd.yaw_rate_Ki:.5f}")
+        self.yaw_rate_Kd_input.setText(f"{self.dd.yaw_rate_Kd:.5f}")
+
+        self.vs_Kp_input.setText(f"{self.dd.vs_Kp:.5f}")
+        self.vs_Ki_input.setText(f"{self.dd.vs_Ki:.5f}")
+        self.vs_Kd_input.setText(f"{self.dd.vs_Kd:.5f}")
+    
         self.pitch_Kp_input.setText(f"{self.dd.pitch_Kp:.5f}")
         self.pitch_Ki_input.setText(f"{self.dd.pitch_Ki:.5f}")
         self.pitch_Kd_input.setText(f"{self.dd.pitch_Kd:.5f}")
@@ -242,12 +330,32 @@ class MainWindow(QMainWindow):
         self.yaw_Ki_input.setText(f"{self.dd.yaw_Ki:.5f}")
         self.yaw_Kd_input.setText(f"{self.dd.yaw_Kd:.5f}")
 
-        self.thrust_Kp_input.setText(f"{self.dd.thrust_Kp:.5f}")
-        self.thrust_Ki_input.setText(f"{self.dd.thrust_Ki:.5f}")
-        self.thrust_Kd_input.setText(f"{self.dd.thrust_Kd:.5f}")
+        self.altitude_Kp_input.setText(f"{self.dd.altitude_Kp:.5f}")
+        self.altitude_Ki_input.setText(f"{self.dd.altitude_Ki:.5f}")
+        self.altitude_Kd_input.setText(f"{self.dd.altitude_Kd:.5f}")
         pass
 
     def __create_input_widget(self):
+        self.pitch_rate_tunings_label = QLabel("Pitch Rate P I D")
+        self.pitch_rate_Kp_input = QLineEdit()
+        self.pitch_rate_Ki_input = QLineEdit()
+        self.pitch_rate_Kd_input = QLineEdit()
+
+        self.roll_rate_tunings_label = QLabel("Roll Rate P I D")
+        self.roll_rate_Kp_input = QLineEdit()
+        self.roll_rate_Ki_input = QLineEdit()
+        self.roll_rate_Kd_input = QLineEdit()
+
+        self.yaw_rate_tunings_label = QLabel("Yaw Rate P I D")
+        self.yaw_rate_Kp_input = QLineEdit()
+        self.yaw_rate_Ki_input = QLineEdit()
+        self.yaw_rate_Kd_input = QLineEdit()
+
+        self.vs_tunings_label = QLabel("V/S P I D")
+        self.vs_Kp_input = QLineEdit()
+        self.vs_Ki_input = QLineEdit()
+        self.vs_Kd_input = QLineEdit()
+
         self.pitch_tunings_label = QLabel("Pitch P I D")
         self.pitch_Kp_input = QLineEdit()
         self.pitch_Ki_input = QLineEdit()
@@ -263,41 +371,64 @@ class MainWindow(QMainWindow):
         self.yaw_Ki_input = QLineEdit()
         self.yaw_Kd_input = QLineEdit()
 
-        self.thrust_tunings_label = QLabel("Thrust P I D")
-        self.thrust_Kp_input = QLineEdit()
-        self.thrust_Ki_input = QLineEdit()
-        self.thrust_Kd_input = QLineEdit()
+        self.altitude_tunings_label = QLabel("Altitude P I D")
+        self.altitude_Kp_input = QLineEdit()
+        self.altitude_Ki_input = QLineEdit()
+        self.altitude_Kd_input = QLineEdit()
 
+        self.data_request_button = QPushButton("Data Request")
         self.apply_tunings_button = QPushButton("Apply")
         self.reset_tunings_button = QPushButton("Reset")
+        self.data_request_button.clicked.connect(self.data_request)
         self.apply_tunings_button.clicked.connect(self.apply_pid_tunings)
         self.reset_tunings_button.clicked.connect(self.reset_pid_tunings)
 
         input_widget_layout = QGridLayout()
 
-        input_widget_layout.addWidget(self.pitch_tunings_label, 0, 0)
-        input_widget_layout.addWidget(self.pitch_Kp_input, 0, 1)
-        input_widget_layout.addWidget(self.pitch_Ki_input, 0, 2)
-        input_widget_layout.addWidget(self.pitch_Kd_input, 0, 3)
+        input_widget_layout.addWidget(self.pitch_rate_tunings_label, 1, 0)
+        input_widget_layout.addWidget(self.pitch_rate_Kp_input, 1, 1)
+        input_widget_layout.addWidget(self.pitch_rate_Ki_input, 1, 2)
+        input_widget_layout.addWidget(self.pitch_rate_Kd_input, 1, 3)
 
-        input_widget_layout.addWidget(self.roll_tunings_label, 1, 0)
-        input_widget_layout.addWidget(self.roll_Kp_input, 1, 1)
-        input_widget_layout.addWidget(self.roll_Ki_input, 1, 2)
-        input_widget_layout.addWidget(self.roll_Kd_input, 1, 3)
+        input_widget_layout.addWidget(self.roll_rate_tunings_label, 2, 0)
+        input_widget_layout.addWidget(self.roll_rate_Kp_input, 2, 1)
+        input_widget_layout.addWidget(self.roll_rate_Ki_input, 2, 2)
+        input_widget_layout.addWidget(self.roll_rate_Kd_input, 2, 3)
 
-        input_widget_layout.addWidget(self.yaw_tunings_label, 2, 0)
-        input_widget_layout.addWidget(self.yaw_Kp_input, 2, 1)
-        input_widget_layout.addWidget(self.yaw_Ki_input, 2, 2)
-        input_widget_layout.addWidget(self.yaw_Kd_input, 2, 3)
+        input_widget_layout.addWidget(self.yaw_rate_tunings_label, 3, 0)
+        input_widget_layout.addWidget(self.yaw_rate_Kp_input, 3, 1)
+        input_widget_layout.addWidget(self.yaw_rate_Ki_input, 3, 2)
+        input_widget_layout.addWidget(self.yaw_rate_Kd_input, 3, 3)
+
+        input_widget_layout.addWidget(self.vs_tunings_label, 4, 0)
+        input_widget_layout.addWidget(self.vs_Kp_input, 4, 1)
+        input_widget_layout.addWidget(self.vs_Ki_input, 4, 2)
+        input_widget_layout.addWidget(self.vs_Kd_input, 4, 3)
+
+        input_widget_layout.addWidget(self.pitch_tunings_label, 5, 0)
+        input_widget_layout.addWidget(self.pitch_Kp_input, 5, 1)
+        input_widget_layout.addWidget(self.pitch_Ki_input, 5, 2)
+        input_widget_layout.addWidget(self.pitch_Kd_input, 5, 3)
+
+        input_widget_layout.addWidget(self.roll_tunings_label, 6, 0)
+        input_widget_layout.addWidget(self.roll_Kp_input, 6, 1)
+        input_widget_layout.addWidget(self.roll_Ki_input, 6, 2)
+        input_widget_layout.addWidget(self.roll_Kd_input, 6, 3)
+
+        input_widget_layout.addWidget(self.yaw_tunings_label, 7, 0)
+        input_widget_layout.addWidget(self.yaw_Kp_input, 7, 1)
+        input_widget_layout.addWidget(self.yaw_Ki_input, 7, 2)
+        input_widget_layout.addWidget(self.yaw_Kd_input, 7, 3)
 
 
-        input_widget_layout.addWidget(self.thrust_tunings_label, 3, 0)
-        input_widget_layout.addWidget(self.thrust_Kp_input, 3, 1)
-        input_widget_layout.addWidget(self.thrust_Ki_input, 3, 2)
-        input_widget_layout.addWidget(self.thrust_Kd_input, 3, 3)
+        input_widget_layout.addWidget(self.altitude_tunings_label, 8, 0)
+        input_widget_layout.addWidget(self.altitude_Kp_input, 8, 1)
+        input_widget_layout.addWidget(self.altitude_Ki_input, 8, 2)
+        input_widget_layout.addWidget(self.altitude_Kd_input, 8, 3)
 
-        input_widget_layout.addWidget(self.apply_tunings_button, 4, 2)
-        input_widget_layout.addWidget(self.reset_tunings_button, 4, 3)
+        input_widget_layout.addWidget(self.data_request_button, 9, 1)
+        input_widget_layout.addWidget(self.apply_tunings_button, 9, 2)
+        input_widget_layout.addWidget(self.reset_tunings_button, 9, 3)
 
         input_widget = QWidget()
         input_widget.setLayout(input_widget_layout)
@@ -311,14 +442,21 @@ class MainWindow(QMainWindow):
         self.raw_data.setText(
             f'''
 Pitch {to_degrees(dd.Pitch):.2f}  Yaw {to_degrees(dd.Yaw):.2f}    Roll {to_degrees(dd.Roll):.2f}
+Pitch Rate {dd.pitch_rate:.2f}  Yaw Rate {dd.yaw_rate:.2f}    Roll Rate {dd.roll_rate:.2f}
 Alt. {dd.Alt_relative:.2f}  Abs. {dd.Alt_absolute:.2f}   Radar {dd.Alt_radar:.2f} 
-Setpoints:  Pitch: {to_degrees(dd.Pitch_sp):.2f}    Yaw: {to_degrees(dd.Yaw_sp):.2f}    Roll: {to_degrees(dd.Roll_sp):.2f}      Thrust: {to_degrees(dd.Thrust_sp):.2f} 
+Vertical Speed {dd.vertical_speed}
+Setpoints:  Pitch: {to_degrees(dd.Pitch_sp):.2f}    Yaw: {to_degrees(dd.Yaw_sp):.2f}    Roll: {to_degrees(dd.Roll_sp):.2f}      Altitude: {dd.Altitude_sp:.2f} 
 Motors: {dd.motors}
+Joys : {dd.joy0x:.2f}  {dd.joy0y:.2f} {dd.joy1x:.2f}  {dd.joy1y:.2f}
 PID:
     Pitch   Kp: {dd.pitch_Kp:.5f} Ki: {dd.pitch_Ki:.5f} Kd: {dd.pitch_Kd:.5f}
     Roll    Kp: {dd.roll_Kp:.5f} Ki: {dd.roll_Ki:.5f} Kd: {dd.roll_Kd:.5f}
     Yaw     Kp: {dd.yaw_Kp:.5f} Ki: {dd.yaw_Ki:.5f} Kd: {dd.yaw_Kd:.5f}
-    Thrust  Kp: {dd.thrust_Kp:.5f} Ki: {dd.thrust_Ki:.5f} Kd: {dd.thrust_Kd:.5f}
+    Altitude  Kp: {dd.altitude_Kp:.5f} Ki: {dd.altitude_Ki:.5f} Kd: {dd.altitude_Kd:.5f}
+    Pitch Rate  Kp: {dd.pitch_rate_Kp:.5f} Ki: {dd.pitch_rate_Ki:.5f} Kd: {dd.pitch_rate_Kd:.5f}
+    Roll  Rate  Kp: {dd.roll_rate_Kp:.5f} Ki: {dd.roll_rate_Ki:.5f} Kd: {dd.roll_rate_Kd:.5f}
+    Yaw   Rate  Kp: {dd.yaw_rate_Kp:.5f} Ki: {dd.yaw_rate_Ki:.5f} Kd: {dd.yaw_rate_Kd:.5f}
+    V/S  Kp: {dd.vs_Kp:.5f} Ki: {dd.vs_Ki:.5f} Kd: {dd.vs_Kd:.5f}
 Last contact timestamp: {dd.last_response_time}
 '''
         )

@@ -18,11 +18,16 @@ typedef enum MessageType {
     Input = 0,
     DataRequest = 1,
     SetTuningsPR = 2,
-    SetTuningsYT = 3,
-    GetPosition = 4,
-    GetStatus = 5,
-    GetTuningsPR = 6,
-    GetTuningsYT = 7,
+    SetTuningsYA = 3,
+    SetTuningsPrRr = 4,
+    SetTuningsYrVs = 5,
+    GetPosition = 6,
+    GetStatus = 7,
+    GetRates = 8,
+    GetTuningsPR = 9,
+    GetTuningsYA = 10,
+    GetTuningsPrRr = 11,
+    GetTuningsYrVs = 12,
 } MessageType;
 
 typedef struct Message {

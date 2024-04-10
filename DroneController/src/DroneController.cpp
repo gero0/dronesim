@@ -10,18 +10,22 @@
 void DroneController::update(float dt) {
     sensor_reader->update(dt);
     rotation = sensor_reader->get_rotation();
-    Vector3 acceleration = sensor_reader->get_acceleration();
+    angular_rate = sensor_reader->get_angular_rate();
 
-    velocity_global += acceleration * dt;
-    position_global += velocity_global * dt;
+    Vector3 new_acceleration = sensor_reader->get_acceleration();
+    Vector3 new_velocity = (acceleration + new_acceleration) * 0.5f * dt;
+
+    position = (velocity + new_velocity) * 0.5f * dt;
+    acceleration = new_acceleration;
+    velocity = new_velocity;
 
     altitude = sensor_reader->get_altitude();
     absolute_altitude = sensor_reader->get_absolute_altitude();
     radar_altitude = sensor_reader->get_radar_altitude();
 
-    if (position_global.z <= 0) {
-        velocity_global.z = 0;
-        position_global.z = 0;
+    if (position.z <= 0) {
+        velocity.z = 0;
+        position.z = 0;
     }
 
     if(radar_altitude < 0.2){
@@ -31,27 +35,24 @@ void DroneController::update(float dt) {
         }
     }
 
-
     control_update(dt);
 }
 
 void DroneController::control_update(float dt) {
-    v_thrust = thrust_pid.update(altitude_setpoint, altitude, dt);
-//    v_yaw = yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
-    v_thrust = direct_thrust_value;
-    v_yaw = yaw_raw;
+    float vs_setpoint = altitude_pid.update(altitude_setpoint, altitude, dt);
+    v_thrust = vs_pid.update(vs_setpoint, (altitude - prev_altitude) / dt, dt);
 
-    if (controlState == ControlState::PointHover) {
-        Vector3 position_local = rotate_flat(position_global, -rotation.yaw);
-        Vector3 sp_local = rotate_flat(hover_setpoint, -rotation.yaw);
-        auto px = position_x_pid.update(sp_local.x, position_local.x, dt);
-        auto py = position_y_pid.update(sp_local.y, position_local.y, dt);
-        v_pitch = pitch_pid.update(px * max_angle, rotation.pitch, dt);
-        v_roll = roll_pid.update(py * max_angle, rotation.roll, dt);
-    } else if (controlState == ControlState::Direct) {
-        v_pitch = pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
-        v_roll = roll_pid.update(roll_setpoint, rotation.roll, dt);
-    }
+    v_thrust = direct_thrust_value;
+
+    pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
+    roll_pid.update(roll_setpoint, rotation.roll, dt);
+    yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+
+    v_pitch = pitch_rate_pid.update(pitch_rate_setpoint, angular_rate.pitch, dt);
+    v_roll = roll_rate_pid.update(roll_rate_setpoint, angular_rate.roll, dt);
+    v_yaw = yaw_rate_pid.update(yaw_rate_setpoint, angular_rate.yaw, dt);
+
+    v_yaw = yaw_raw;
 
     front_left->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
     front_right->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
@@ -60,8 +61,8 @@ void DroneController::control_update(float dt) {
 }
 
 
-PidTunings DroneController::get_thrust_tunings() {
-    return thrust_pid.get_tunings();
+PidTunings DroneController::get_altitude_tunings() {
+    return altitude_pid.get_tunings();
 }
 
 PidTunings DroneController::get_pitch_tunings() {
@@ -76,7 +77,23 @@ PidTunings DroneController::get_yaw_tunings() {
     return yaw_pid.get_tunings();
 }
 
-PidValues DroneController::get_last_pid() {
+PidTunings DroneController::get_pitch_rate_tunings() {
+    return pitch_rate_pid.get_tunings();
+}
+
+PidTunings DroneController::get_roll_rate_tunings() {
+    return roll_rate_pid.get_tunings();
+}
+
+PidTunings DroneController::get_yaw_rate_tunings() {
+    return yaw_rate_pid.get_tunings();
+}
+
+PidTunings DroneController::get_vs_tunings() {
+    return vs_pid.get_tunings();
+}
+
+PidValues DroneController::get_last_pid_output() {
     return {v_thrust, v_pitch, v_roll, v_yaw};
 }
 
@@ -106,8 +123,8 @@ void DroneController::set_altitude(float sp) {
     altitude_setpoint = sp;
 }
 
-void DroneController::set_thrust_tunings(PidTunings tunings) {
-    thrust_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+void DroneController::set_altitude_tunings(PidTunings tunings) {
+    altitude_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
 }
 
 void DroneController::set_pitch_tunings(PidTunings tunings) {
@@ -122,15 +139,41 @@ void DroneController::set_yaw_tunings(PidTunings tunings) {
     yaw_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
 }
 
+void DroneController::set_pitch_rate_tunings(PidTunings tunings) {
+    pitch_rate_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_roll_rate_tunings(PidTunings tunings) {
+    roll_rate_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_yaw_rate_tunings(PidTunings tunings) {
+    yaw_rate_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
+void DroneController::set_vs_tunings(PidTunings tunings) {
+    vs_pid.set_tunings(tunings.Kp, tunings.Ki, tunings.Kd);
+}
+
 bool DroneController::is_stopped() {
     return is_stopped_v;
 }
 
-void DroneController::start(){
-    thrust_pid.reset();
+void DroneController::reset_pids(){
+    vs_pid.reset();
+    altitude_pid.reset();
+
+    pitch_rate_pid.reset();
+    yaw_rate_pid.reset();
+    roll_rate_pid.reset();
+
     roll_pid.reset();
     pitch_pid.reset();
     yaw_pid.reset();
+}
+
+void DroneController::start(){
+    reset_pids();
 
     front_left->enable();
     front_right->enable();
@@ -142,17 +185,13 @@ void DroneController::start(){
 
 bool DroneController::stop(){
     //TODO: altitude check
+    reset_pids();
 
     direct_thrust_value = 0;
     front_left->disable();
     front_right->disable();
     back_right->disable();
     back_left->disable();
-
-    thrust_pid.reset();
-    roll_pid.reset();
-    pitch_pid.reset();
-    yaw_pid.reset();
 
     is_stopped_v = true;
 
@@ -166,7 +205,7 @@ void DroneController::level() {
 
 void DroneController::hover() {
     level();
-    hover_setpoint = position_global;
+    hover_setpoint = position;
     controlState = ControlState::PointHover;
 }
 
@@ -176,7 +215,7 @@ void DroneController::RTO() {
 }
 
 Vector3 DroneController::get_position() {
-    return position_global;
+    return position;
 }
 
 Rotation DroneController::get_rotation() {
@@ -188,7 +227,7 @@ Vector3 DroneController::get_hover_setpoint() {
 }
 
 void DroneController::reset_position() {
-    position_global = {.0f, .0f, .0f};
+    position = {.0f, .0f, .0f};
 }
 
 void DroneController::set_hover_setpoint(Vector3 sp) {
@@ -226,6 +265,15 @@ float DroneController::get_direct_thrust() const {
 void DroneController::set_direct_thrust(float thrust) {
     direct_thrust_value = std::clamp(thrust, 0.0f, 1.0f);
 }
+
+Rotation DroneController::get_angular_rates() {
+    return angular_rate;
+}
+
+float DroneController::get_vertical_speed() {
+    return vertical_speed;
+}
+
 
 
 

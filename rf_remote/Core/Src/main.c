@@ -127,12 +127,25 @@ float altitude_sp = 0.0f;
 float pitch_tunings[3];
 float roll_tunings[3];
 float yaw_tunings[3];
-float thrust_tunings[3];
+float altitude_tunings[3];
+
+float pitch_rate_tunings[3];
+float roll_rate_tunings[3];
+float yaw_rate_tunings[3];
+float vs_tunings[3];
+
+float vertical_speed;
+float angular_rates[3];
 
 float received_pitch_tunings[3];
 float received_roll_tunings[3];
 float received_yaw_tunings[3];
-float received_thrust_tunings[3];
+float received_altitude_tunings[3];
+
+float received_pitch_rate_tunings[3];
+float received_roll_rate_tunings[3];
+float received_yaw_rate_tunings[3];
+float received_vs_tunings[3];
 
 bool land_cmd_flag = false;
 bool estop_cmd_flag = false;
@@ -195,6 +208,11 @@ void display_draw_rotation(char line_1[], char line_2[]){
     sprintf(line_2, "Y:%.2f", to_degrees(angles[1]));
 }
 
+void display_draw_rates(char line_1[], char line_2[]){
+    sprintf(line_1, "Pr:%.0f Rr:%.0f", angular_rates[0], angular_rates[2]);
+    sprintf(line_2, "Yr:%.0f V/S:%.0f", angular_rates[1], vertical_speed);
+}
+
 void display_draw_position(char line_1[], char line_2[]){
     sprintf(line_1, "X:%.2f Y:%.2f", pos[0], pos[1]);
 }
@@ -223,6 +241,7 @@ Display_t screens[] = {
         display_draw_summary,
         display_draw_analog,
         display_draw_rotation,
+        display_draw_rates,
         display_draw_position,
         display_draw_motors,
         display_draw_altitude,
@@ -298,11 +317,27 @@ Message create_settuningsPR_message(float pitch_tunings[3], float roll_tunings[3
     return msg;
 }
 
-Message create_settuningsYT_message(float yaw_tunings[3], float thrust_tunings[3]){
+Message create_settuningsYA_message(float yaw_tunings[3], float altitude_tunings[3]){
     Message msg;
-    msg.type = SetTuningsYT;
+    msg.type = SetTuningsYA;
     memcpy(&msg.data[0], yaw_tunings, sizeof(float) * 3);
-    memcpy(&msg.data[12], thrust_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], altitude_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+Message create_settuningsPrRr_message(float pr_tunings[3], float rr_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsPrRr;
+    memcpy(&msg.data[0], pr_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], rr_tunings, sizeof(float) * 3);
+    return msg;
+}
+
+Message create_settuningsYrVs_message(float yr_tunings[3], float vs_tunings[3]){
+    Message msg;
+    msg.type = SetTuningsYrVs;
+    memcpy(&msg.data[0], yr_tunings, sizeof(float) * 3);
+    memcpy(&msg.data[12], vs_tunings, sizeof(float) * 3);
     return msg;
 }
 
@@ -319,7 +354,11 @@ void receive_byte(uint8_t byte){
         break;
         case RxLength:
             rx_len = byte;
-            rx_state = RxReceiving;
+            if(rx_len == 0){
+                rx_state = RxReceived;
+            }else{
+                rx_state = RxReceiving;
+            }
             break;
         case RxReceiving:
             rx_buffer[rx_buffer_index] = byte;
@@ -342,18 +381,33 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 void parse_uart_input(Queue *queue){
-    uint16_t crc = (uint16_t)(rx_buffer[rx_len]) | (uint16_t)(rx_buffer[rx_len+1] << 8);
-    uint16_t verify_crc = crc16(rx_buffer, rx_len);
-    if(crc == verify_crc){
-        memcpy(received_pitch_tunings, &rx_buffer[0], sizeof(float) * 3);
-        memcpy(received_roll_tunings, &rx_buffer[12], sizeof(float) * 3);
-        memcpy(received_yaw_tunings, &rx_buffer[24], sizeof(float) * 3);
-        memcpy(received_thrust_tunings, &rx_buffer[36], sizeof(float) * 3);
-        Message pr = create_settuningsPR_message(received_pitch_tunings, received_roll_tunings);
-        Message yt = create_settuningsYT_message(received_yaw_tunings, received_thrust_tunings);
-        queue_push(queue, &pr);
-        queue_push(queue, &yt);
+    if(rx_type == 1){
+        Message msg;
+        msg.type = DataRequest;
+        queue_push(queue, &msg);
+    }else{
+        uint16_t crc = (uint16_t)(rx_buffer[rx_len]) | (uint16_t)(rx_buffer[rx_len+1] << 8);
+        uint16_t verify_crc = crc16(rx_buffer, rx_len);
+        if(crc == verify_crc){
+            memcpy(received_pitch_tunings, &rx_buffer[0], sizeof(float) * 3);
+            memcpy(received_roll_tunings, &rx_buffer[12], sizeof(float) * 3);
+            memcpy(received_yaw_tunings, &rx_buffer[24], sizeof(float) * 3);
+            memcpy(received_altitude_tunings, &rx_buffer[36], sizeof(float) * 3);
+            memcpy(received_pitch_rate_tunings, &rx_buffer[48], sizeof(float) * 3);
+            memcpy(received_roll_rate_tunings, &rx_buffer[60], sizeof(float) * 3);
+            memcpy(received_yaw_rate_tunings, &rx_buffer[72], sizeof(float) * 3);
+            memcpy(received_vs_tunings, &rx_buffer[84], sizeof(float) * 3);
+            Message pr = create_settuningsPR_message(received_pitch_tunings, received_roll_tunings);
+            Message yt = create_settuningsYA_message(received_yaw_tunings, received_altitude_tunings);
+            Message prrr = create_settuningsPrRr_message(received_pitch_rate_tunings, received_roll_rate_tunings);
+            Message yrvs = create_settuningsYrVs_message(received_yaw_rate_tunings, received_vs_tunings);
+            queue_push(queue, &pr);
+            queue_push(queue, &yt);
+            queue_push(queue, &prrr);
+            queue_push(queue, &yrvs);
+        }
     }
+
     rx_state = RxHeader;
     rx_len = 0;
     rx_type = 0;
@@ -381,9 +435,21 @@ void update_values(Message msg) {
             memcpy(pitch_tunings, &msg.data[0], sizeof(float) * 3);
             memcpy(roll_tunings, &msg.data[12], sizeof(float) * 3);
             break;
-        case GetTuningsYT:
+        case GetTuningsYA:
             memcpy(yaw_tunings, &msg.data[0], sizeof(float) * 3);
-            memcpy(thrust_tunings, &msg.data[12], sizeof(float) * 3);
+            memcpy(altitude_tunings, &msg.data[12], sizeof(float) * 3);
+            break;
+        case GetTuningsPrRr:
+            memcpy(pitch_rate_tunings, &msg.data[0], sizeof(float) * 3);
+            memcpy(roll_rate_tunings, &msg.data[12], sizeof(float) * 3);
+            break;
+        case GetTuningsYrVs:
+            memcpy(yaw_rate_tunings, &msg.data[0], sizeof(float) * 3);
+            memcpy(vs_tunings, &msg.data[12], sizeof(float) * 3);
+            break;
+        case GetRates:
+            memcpy(angular_rates, &msg.data[0], sizeof(float) * 3);
+            memcpy(&vertical_speed, &msg.data[12], sizeof(float));
             break;
         default:
             break;
@@ -468,10 +534,10 @@ void delay_us(uint16_t us)
 }
 
 void send_update_via_serial(){
-    uint8_t buffer[126];
+    uint8_t buffer[255];
     buffer[0] = 0b10101010;
     buffer[1] = 0;
-    buffer[2] = 121;
+    buffer[2] = 184;
     memcpy(&buffer[3], angles, sizeof(float) * 3);
     memcpy(&buffer[15], pos, sizeof(float) * 2);
     memcpy(&buffer[23], &press_altitude, sizeof(float));
@@ -485,18 +551,23 @@ void send_update_via_serial(){
     memcpy(&buffer[55], &pitch_tunings, sizeof(float) * 3);
     memcpy(&buffer[67], &roll_tunings, sizeof(float) * 3);
     memcpy(&buffer[79], &yaw_tunings, sizeof(float) * 3);
-    memcpy(&buffer[91], &thrust_tunings, sizeof(float) * 3);
+    memcpy(&buffer[91], &altitude_tunings, sizeof(float) * 3);
     memcpy(&buffer[103], &last_response_time, sizeof(size_t));
     memcpy(&buffer[107], &joy0_x, sizeof(float));
     memcpy(&buffer[111], &joy0_y, sizeof(float));
     memcpy(&buffer[115], &joy1_x, sizeof(float));
     memcpy(&buffer[119], &joy1_y, sizeof(float));
-    buffer[123] = 0; //Reserved
-    uint16_t crc = crc16(&buffer[3], 121);
-    buffer[124] = (uint8_t)(crc);
-    buffer[125] = (uint8_t)(crc >> 8);
+    memcpy(&buffer[123], &pitch_rate_tunings, sizeof(float) * 3);
+    memcpy(&buffer[135], &roll_rate_tunings, sizeof(float) * 3);
+    memcpy(&buffer[147], &yaw_rate_tunings, sizeof(float) * 3);
+    memcpy(&buffer[159], &vs_tunings, sizeof(float) * 3);
+    memcpy(&buffer[171], &angular_rates, sizeof(float) * 3);
+    memcpy(&buffer[183], &vertical_speed, sizeof(float));
+    uint16_t crc = crc16(&buffer[3], 184);
+    buffer[187] = (uint8_t)(crc);
+    buffer[188] = (uint8_t)(crc >> 8);
 
-    HAL_UART_Transmit(&huart3, buffer, 126, HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart3, buffer, 189, HAL_MAX_DELAY);
 }
 
 /* USER CODE END 0 */
@@ -565,7 +636,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-    const int msg_send_period = 20;
+    const int msg_send_period = 60;
     const int screen_update_period = 100;
     size_t last_screen_update = 0;
 

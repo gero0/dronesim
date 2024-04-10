@@ -53,7 +53,7 @@ plt.figure()
 plt.plot(pr)
 
 org_fs = 333
-target_fs = 200
+target_fs = 993
 
 pr = resample_by_interpolation(pr, org_fs, target_fs)
 plt.figure()
@@ -62,12 +62,17 @@ plt.plot(pr)
 plt.figure()
 
 #FIR
-numtaps = 32
-fc = 30
+numtaps = 64
+fc = 20
 fs = target_fs
 coeffs = signal.firwin(numtaps, fc, fs=fs)
 filtered = signal.lfilter(coeffs, 1.0, pr)
-print(coeffs)
+
+cstring = ""
+for x in coeffs:
+    cstring += str(x) + ", "
+print(cstring)
+
 
 w, h = signal.freqz(coeffs, worN=8000)
 

@@ -26,6 +26,11 @@ enum class CommState {
     Error
 };
 
+enum class ResponseState{
+    Basic,
+    Full
+};
+
 class CommManager {
 public:
     CommManager(
@@ -57,6 +62,8 @@ private:
     TickType_t last_contact_time = xTaskGetTickCount();
     TickType_t last_stop_cmd_received = 0;
     TickType_t stop_cmd_threshold = 1000;
+
+    ResponseState response_state = ResponseState::Basic;
 };
 
 

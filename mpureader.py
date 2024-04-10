@@ -1,12 +1,11 @@
 import serial
 import struct
+import crcmod
+import csv
 from math import pi
 from os import system, name
-# import curses
 from curses import wrapper
-import crcmod
 
-import csv
 
 frame_start = b'\xaa'
 
