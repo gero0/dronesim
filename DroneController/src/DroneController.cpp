@@ -3,7 +3,6 @@
 //
 
 #include "DroneController.h"
-#include <iostream>
 #include <algorithm>
 #include <array>
 
@@ -20,6 +19,7 @@ void DroneController::update(float dt) {
     velocity = new_velocity;
 
     altitude = sensor_reader->get_altitude();
+    vertical_speed = sensor_reader->get_vs();
     absolute_altitude = sensor_reader->get_absolute_altitude();
     radar_altitude = sensor_reader->get_radar_altitude();
 
@@ -44,15 +44,21 @@ void DroneController::control_update(float dt) {
 
     v_thrust = direct_thrust_value;
 
-    pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
-    roll_pid.update(roll_setpoint, rotation.roll, dt);
-    yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+    if(mode == ControlMode::Angle){
+        pitch_rate_setpoint = pitch_pid.update(pitch_setpoint, rotation.pitch, dt) * max_dps;
+        roll_rate_setpoint =  roll_pid.update(roll_setpoint, rotation.roll, dt) * max_dps;
+//        yaw_rate_setpoint = yaw_pid.update(yaw_setpoint, rotation.yaw, dt) * max_dps_yaw;
+    }else{
+        pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
+        roll_pid.update(roll_setpoint, rotation.roll, dt);
+        yaw_pid.update(yaw_setpoint, rotation.yaw, dt);
+    }
 
     v_pitch = pitch_rate_pid.update(pitch_rate_setpoint, angular_rate.pitch, dt);
     v_roll = roll_rate_pid.update(roll_rate_setpoint, angular_rate.roll, dt);
-    v_yaw = yaw_rate_pid.update(yaw_rate_setpoint, angular_rate.yaw, dt);
+    v_yaw = -yaw_rate_pid.update(yaw_rate_setpoint, angular_rate.yaw, dt);
 
-    v_yaw = yaw_raw;
+//    v_yaw = yaw_raw;
 
     front_left->set_speed(std::clamp(v_thrust - v_pitch + v_roll + v_yaw, 0.0f, 1.0f));
     front_right->set_speed(std::clamp(v_thrust - v_pitch - v_roll - v_yaw, 0.0f, 1.0f));
@@ -274,6 +280,50 @@ float DroneController::get_vertical_speed() {
     return vertical_speed;
 }
 
+void DroneController::pitch_input(float input) {
+    input = std::clamp(input, -1.0f, 1.0f);
+    if(mode == ControlMode::Angle) {
+        set_pitch(input * max_angle);
+    }else{
+        pitch_rate_setpoint = input * max_dps;
+    }
+}
 
+void DroneController::roll_input(float input) {
+    input = std::clamp(input, -1.0f, 1.0f);
+    if(mode == ControlMode::Angle) {
+        set_roll(input * max_angle);
+    }else{
+        roll_rate_setpoint = input * max_dps;
+    }
+}
 
+void DroneController::yaw_input(float input) {
+//    input = std::clamp(input, -1.0f, 1.0f);
+//    if(mode == ControlMode::Angle){
+//        set_yaw(input * yaw_constant);
+//    }else{
+//        yaw_rate_setpoint = input * max_dps_yaw;
+//    }
+//
+//    yaw_raw_input(input * yaw_raw_constant);
+    if(std::abs(input) < 0.1f){
+        input = 0.0f;
+    }
+    yaw_rate_setpoint = -input * max_dps_yaw;
+}
 
+void DroneController::thrust_input(float input) {
+    if( std::abs(input) < 0.1){
+        input = 0;
+    }
+    set_direct_thrust(direct_thrust_value + input * thrust_input_const);
+}
+
+void DroneController::set_control_mode(ControlMode mode) {
+    this->mode = mode;
+}
+
+Vector3 DroneController::get_acceleration(){
+    return sensor_reader->get_acceleration();
+}

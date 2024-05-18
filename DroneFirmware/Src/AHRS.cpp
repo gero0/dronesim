@@ -110,7 +110,7 @@ bool AHRS::init_bme(I2C_HandleTypeDef *bme_i2c) {
     bme_settings.filter = BME280_FILTER_COEFF_16;
     bme_settings.osr_h = BME280_OVERSAMPLING_1X;
     bme_settings.osr_p = BME280_OVERSAMPLING_16X;
-    bme_settings.osr_t = BME280_OVERSAMPLING_1X;
+    bme_settings.osr_t = BME280_OVERSAMPLING_2X;
     bme_settings.standby_time = BME280_STANDBY_TIME_0_5_MS;
     bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &bme_settings, &bme_dev);
     bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme_dev);
@@ -213,8 +213,8 @@ void AHRS::update(float dt) {
     mpu_get_gyro_reg(gyro_raw, nullptr);
     gyro_to_dps(gyro_raw, const_cast<float *>(gyro_dps), GYRO_FSR);
 
-    accelerometer = {-accel_gs[1], accel_gs[0], accel_gs[2]};
-    gyroscope = {-gyro_dps[1], gyro_dps[0], gyro_dps[2]};
+    accelerometer = {-accel_gs[0], -accel_gs[1], accel_gs[2]};
+    gyroscope = {-gyro_dps[0], -gyro_dps[1], gyro_dps[2]};
 
     if(qmc_dataready){
         int16_t temp[3];
@@ -229,7 +229,9 @@ void AHRS::update(float dt) {
     if (xTaskGetTickCount() - bme_timestamp >= 100) {
         const double pressure = get_pressure(bme_period, &bme_dev).pressure;
         const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-        abs_altitude = static_cast<float>(alt);
+        auto new_altitude = static_cast<float>(alt);
+        vertical_speed = (new_altitude - abs_altitude) / (0.1f);
+        abs_altitude = new_altitude;
         bme_timestamp = xTaskGetTickCount();
 
         if (vl5_dataready) {
@@ -262,6 +264,10 @@ float AHRS::get_radar_altitude() {
 
 float AHRS::get_absolute_altitude() {
     return abs_altitude;
+}
+
+float AHRS::get_vs(){
+    return vertical_speed;
 }
 
 void AHRS::vl5_ready() {

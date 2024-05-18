@@ -179,12 +179,7 @@ void CommManager::prepareResponse() {
 
 
 CommState CommManager::receive_message(Message *output_msg, TickType_t *last_contact_time) {
-    const TickType_t connlost_threshold = 3000;
-    const float altitude_const = 0.4;
-    const float thrust_const = 0.025;
-    const float max_angle = (20.0f / 180.0f) * M_PI;
-    const float yaw_constant = 0.1f;
-
+    const TickType_t connlost_threshold = 2000;
     static TickType_t last_angle_input;
     static TickType_t last_altitude_input;
 
@@ -203,13 +198,6 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 float roll_input = *(float *) (&msg.data[8]);
                 float alt_input = *(float *) (&msg.data[12]);
                 uint8_t commands = *(uint8_t *) (&msg.data[16]);
-
-                pitch_input = std::clamp(pitch_input, -1.0f, 1.0f);
-                yaw_input = std::clamp(yaw_input, -1.0f, 1.0f);
-                roll_input = std::clamp(roll_input, -1.0f, 1.0f);
-                if( std::abs(alt_input) < 0.1){
-                    alt_input = 0;
-                }
 
                 auto timestamp = xTaskGetTickCount();
 
@@ -239,26 +227,12 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                     }
                 }
 
-                controller->set_pitch(pitch_input * max_angle);
-                controller->set_roll(roll_input * max_angle);
-                controller->yaw_raw_input(yaw_input);
-
-//                if (timestamp > last_angle_input) {
-//                    last_angle_input = timestamp;
-//                    auto [pitch, yaw, roll] = controller->get_rotation_setpoints();
-//                    yaw = yaw + yaw_input * yaw_constant;
-//                    controller->set_yaw(yaw);
-//                }
+                controller->pitch_input(pitch_input);
+                controller->roll_input(roll_input);
+                controller->yaw_input(yaw_input);
 
                 if (timestamp > last_altitude_input) {
-//                    last_altitude_input = timestamp;
-//                    float altitude_sp = controller->get_altitude_setpoint();
-//                    altitude_sp += alt_input * altitude_const;
-//                    controller->set_altitude(altitude_sp);
-                    float thrust = controller->get_direct_thrust();
-                    thrust += alt_input * thrust_const;
-                    thrust = std::clamp(thrust, 0.0f, 1.0f);
-                    controller->set_direct_thrust(thrust);
+                    controller->thrust_input(alt_input);
                 }
                 xSemaphoreGive(controller_mutex);
             }

@@ -28,6 +28,8 @@ public:
 
     Vector3 get_acceleration() override;
 
+    float get_vs() override;
+
     float get_altitude() override;
 
     float get_radar_altitude() override;
@@ -69,6 +71,7 @@ private:
     bme280_settings bme_settings{};
 
     float altitude = 0.0f;
+    float vertical_speed = 0.0f;
     float abs_altitude = 0.0f;
     float base_altitude = 0.0f;
     float radar_altitude = 0.0f;

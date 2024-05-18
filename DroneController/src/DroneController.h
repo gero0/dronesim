@@ -10,6 +10,11 @@
 #include "MotorDriver.h"
 #include "PID.h"
 
+enum class ControlMode{
+    Rate,
+    Angle
+};
+
 struct PidValues {
     float v_thrust;
     float v_pitch;
@@ -51,6 +56,14 @@ public:
     PidTunings get_yaw_rate_tunings();
 
     PidTunings get_vs_tunings();
+
+    void pitch_input(float input);
+
+    void roll_input(float input);
+
+    void yaw_input(float input);
+
+    void thrust_input(float input);
 
     void set_pitch_rate_tunings(PidTunings tunings);
 
@@ -94,6 +107,8 @@ public:
 
     Vector3 get_position();
 
+    Vector3 get_acceleration();
+
     Vector3 get_hover_setpoint();
 
     Rotation get_rotation();
@@ -120,12 +135,38 @@ public:
 
     void yaw_raw_input(float input);
 
+    void set_control_mode(ControlMode mode);
+
 private:
     SensorReader *sensor_reader;
 
+    ControlMode mode = ControlMode::Angle;
+
     bool is_stopped_v = false;
 
-    const float yaw_raw_constant = 0.1;
+    const float max_angle = (20.0f / 180.0f) * M_PI;
+    const float max_dps = 250.0f;
+    const float max_dps_yaw = 200.0f;
+    const float yaw_raw_constant = 0.5;
+    const float yaw_constant = 0.1f;
+    const float altitude_input_const = 0.4;
+    const float thrust_input_const = 0.025;
+
+    PID position_x_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
+    PID position_y_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
+
+    PID altitude_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    PID vs_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+    PID pitch_pid{0.65f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
+    PID roll_pid{0.65f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
+    PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
+
+    PID pitch_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
+    PID roll_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
+    PID yaw_rate_pid{0.0015f, 0.0f, 0.0f, -1.0f, 1.0f};
+
+
     float yaw_raw = 0.0f;
     float yaw_setpoint = 0.0f;
     float pitch_setpoint = 0.0f;
@@ -155,20 +196,6 @@ private:
     MotorDriver *front_right;
     MotorDriver *back_left;
     MotorDriver *back_right;
-
-    PID position_x_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
-    PID position_y_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
-
-    PID altitude_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-    PID vs_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-
-    PID pitch_pid{0.00f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
-    PID roll_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
-    PID yaw_pid{0.00f, 0.0f, 0.0f, -1.0f, 1.0f};
-
-    PID pitch_rate_pid{0.000f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
-    PID roll_rate_pid{0.000f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0, 1.0};
-    PID yaw_rate_pid{0.000f, 0.0f, 0.0f, -1.0f, 1.0f};
 
     Vector3 position{0.0f, 0.0f, 0.0f};
     Vector3 velocity{0.0f, 0.0f, 0.0f};

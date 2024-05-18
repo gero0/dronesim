@@ -13,6 +13,7 @@ public:
     virtual Rotation get_rotation() = 0;
     virtual Rotation get_angular_rate() = 0;
     virtual float get_altitude() = 0;
+    virtual float get_vs() = 0;
     virtual float get_radar_altitude() = 0;
     virtual float get_absolute_altitude() = 0;
     virtual void update(float dt) = 0;
