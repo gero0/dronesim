@@ -112,15 +112,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
             }
         }
     }
-    else if (GPIO_Pin == QMC_IRQ_Pin) {
+    if (GPIO_Pin == QMC_IRQ_Pin) {
         ahrs.qmc_ready();
     }
-    else if (GPIO_Pin == VL5_IRQ_Pin) {
+    if (GPIO_Pin == VL5_IRQ_Pin) {
         ahrs.vl5_ready();
     }
-    else {
-        __NOP();
-    }
+
+    __NOP();
 }
 void emergency_stop(uint8_t err) {
     emergency_code = err;

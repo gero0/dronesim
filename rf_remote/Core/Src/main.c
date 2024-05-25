@@ -210,7 +210,7 @@ void display_draw_rotation(char line_1[], char line_2[]){
 
 void display_draw_rates(char line_1[], char line_2[]){
     sprintf(line_1, "Pr:%.0f Rr:%.0f", angular_rates[0], angular_rates[2]);
-    sprintf(line_2, "Yr:%.0f V/S:%.0f", angular_rates[1], vertical_speed);
+    sprintf(line_2, "Yr:%.0f V/S:%.3f", angular_rates[1], vertical_speed);
 }
 
 void display_draw_position(char line_1[], char line_2[]){

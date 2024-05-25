@@ -144,9 +144,9 @@ private:
 
     bool is_stopped_v = false;
 
-    const float max_angle = (20.0f / 180.0f) * M_PI;
+    const float max_angle = (30.0f / 180.0f) * M_PI;
     const float max_dps = 250.0f;
-    const float max_dps_yaw = 200.0f;
+    const float max_dps_yaw = 120.0f;
     const float yaw_raw_constant = 0.5;
     const float yaw_constant = 0.1f;
     const float altitude_input_const = 0.4;
@@ -158,13 +158,13 @@ private:
     PID altitude_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
     PID vs_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
-    PID pitch_pid{0.65f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
-    PID roll_pid{0.65f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
+    PID pitch_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
+    PID roll_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
     PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
 
     PID pitch_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
     PID roll_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
-    PID yaw_rate_pid{0.0015f, 0.0f, 0.0f, -1.0f, 1.0f};
+    PID yaw_rate_pid{0.003f, 0.0f, 0.0f, -1.0f, 1.0f};
 
 
     float yaw_raw = 0.0f;

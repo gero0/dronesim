@@ -170,7 +170,14 @@ void AHRS::madgwick_update() {
 
     angular_rate = {gyroscope.axis.y, gyroscope.axis.z, gyroscope.axis.x};
 
-    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
+    if(!mag_broken){
+        FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
+    }
+    else{
+        //failsafe when QMC randomly stops working
+        FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 1.0 / AHRS_SAMPLE_RATE);
+    }
+
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
     rotation_current = {
@@ -216,6 +223,8 @@ void AHRS::update(float dt) {
     accelerometer = {-accel_gs[0], -accel_gs[1], accel_gs[2]};
     gyroscope = {-gyro_dps[0], -gyro_dps[1], gyro_dps[2]};
 
+    size_t current_time = xTaskGetTickCount();
+
     if(qmc_dataready){
         int16_t temp[3];
         qmc_read_all_axes(temp);
@@ -224,15 +233,20 @@ void AHRS::update(float dt) {
                 static_cast<float>(temp[2])
         };
         qmc_dataready = false;
+        qmc_timestamp = current_time;
     }
 
-    if (xTaskGetTickCount() - bme_timestamp >= 100) {
+    if(current_time - qmc_timestamp >= 1000){
+        mag_broken = true;
+    }
+
+    if (current_time - bme_timestamp >= 100) {
         const double pressure = get_pressure(bme_period, &bme_dev).pressure;
         const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
         auto new_altitude = static_cast<float>(alt);
         vertical_speed = (new_altitude - abs_altitude) / (0.1f);
         abs_altitude = new_altitude;
-        bme_timestamp = xTaskGetTickCount();
+        bme_timestamp = current_time;
 
         if (vl5_dataready) {
             VL53L0X_RangingMeasurementData_t RangingMeasurementData;
@@ -240,13 +254,23 @@ void AHRS::update(float dt) {
             VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
             radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
             vl5_dataready = false;
+            vl5_timestamp = current_time;
         }
     }
 
-    if (radar_altitude < 0.8f) {
+    if(current_time - vl5_timestamp >= 1000){
+        vl5_broken = true;
+    }
+
+
+    if(radar_altitude < 0.1f && !vl5_broken){
         altitude = radar_altitude;
         base_altitude = abs_altitude - altitude;
-    } else {
+    }
+    else if (radar_altitude < 0.8f && ! vl5_broken) {
+        altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
+        base_altitude = abs_altitude - altitude;
+    }else {
         altitude = abs_altitude - base_altitude;
     }
 
