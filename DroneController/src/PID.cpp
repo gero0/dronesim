@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include "PID.h"
+#include <cmath>
 
 void PID::set_tunings(float p, float i, float d){
     this->Kp = p;
@@ -29,6 +30,14 @@ void PID::set_clamp(float min, float max){
 
 float PID::update(float setpoint, float process_value, float dt){
     float error = setpoint - process_value;
+    if(angleWrap){
+        if (error > M_PI) {
+            error -= 2.0f * M_PI;
+        }
+        if (error < -M_PI) {
+            error += 2.0f * M_PI;
+        }
+    }
     float pTerm = Kp * error;
 
     iTerm += (Ki * dt) * error;

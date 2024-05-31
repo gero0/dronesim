@@ -146,6 +146,13 @@ private:
     float32_t ax_fir_state[fir_block_size + fir_length - 1];
     float32_t ay_fir_state[fir_block_size + fir_length - 1];
     float32_t az_fir_state[fir_block_size + fir_length - 1];
+
+    static constexpr float mag_matrix[3][3]  = {
+            {1.253260, -0.020579, -0.004206},
+            {-0.020579, 1.197955, 0.014074},
+            {-0.004206, 0.014074, 1.326982},
+    };
+    static constexpr float mag_bias[3] = {0.734107, 5.501961, -2.091495};
 };
 
 #endif //DRONEFIRMWARE_AHRS_H

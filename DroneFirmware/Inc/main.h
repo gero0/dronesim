@@ -67,12 +67,6 @@ void rtos_delay(uint32_t ms);
 #define NRF24_CSN_GPIO_Port GPIOA
 #define NRF24_CE_Pin GPIO_PIN_0
 #define NRF24_CE_GPIO_Port GPIOB
-#define NRF24_IRQ_Pin GPIO_PIN_10
-#define NRF24_IRQ_GPIO_Port GPIOB
-#define NRF24_IRQ_EXTI_IRQn EXTI15_10_IRQn
-#define MPU_IRQ_Pin GPIO_PIN_12
-#define MPU_IRQ_GPIO_Port GPIOB
-#define MPU_IRQ_EXTI_IRQn EXTI15_10_IRQn
 #define QMC_IRQ_Pin GPIO_PIN_13
 #define QMC_IRQ_GPIO_Port GPIOB
 #define QMC_IRQ_EXTI_IRQn EXTI15_10_IRQn
@@ -89,8 +83,6 @@ void rtos_delay(uint32_t ms);
 #define MOTOR4_OUT_GPIO_Port GPIOA
 #define LD3_Pin GPIO_PIN_8
 #define LD3_GPIO_Port GPIOB
-#define LD2_Pin GPIO_PIN_9
-#define LD2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

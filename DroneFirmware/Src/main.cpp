@@ -56,8 +56,9 @@
 ADC_HandleTypeDef hadc1;
 
 I2C_HandleTypeDef hi2c1;
-DMA_HandleTypeDef hdma_i2c1_tx;
-DMA_HandleTypeDef hdma_i2c1_rx;
+I2C_HandleTypeDef hi2c2;
+DMA_HandleTypeDef hdma_i2c2_rx;
+DMA_HandleTypeDef hdma_i2c2_tx;
 
 IWDG_HandleTypeDef hiwdg;
 
@@ -105,7 +106,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
                 motors[i].lock();
             }
             HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-            HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
             HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
             for(size_t i=0; i < 10000000; i++){
                 __NOP();
@@ -146,6 +146,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM10_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_IWDG_Init(void);
+static void MX_I2C2_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -278,7 +279,7 @@ void init_motors() {
     while (true) {
         HAL_IWDG_Refresh(&hiwdg);
         vTaskDelay(1 / portTICK_RATE_MS);
-        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
         const uint32_t now = xTaskGetTickCount();
         const float dt = static_cast<float>(now - prev_time) / 1000.0f;
         xSemaphoreTake(controller_mutex, portMAX_DELAY);
@@ -365,6 +366,7 @@ int main(void)
   MX_TIM10_Init();
   MX_USART2_UART_Init();
 //  MX_IWDG_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
     if (RCC->CSR & RCC_CSR_IWDGRSTF){
         //clear reset flags
@@ -372,7 +374,7 @@ int main(void)
         emergency_stop(1);
     }
     rtos_delay(1000);
-    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c1, &hi2c1);
+    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c2, &hi2c2);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         emergency_stop(2);
@@ -391,8 +393,9 @@ int main(void)
     //start updating madgwick filter in regular intervals
 //    HAL_TIM_Base_Start_IT(&htim10);
 
-    xTaskCreate(CommTask, "CommTask", 300, NULL, 2, NULL);
-    xTaskCreate(ControlTask, "ControlTask", 800, NULL, 3, NULL);
+    xTaskCreate(ControlTask, "ControlTask", 1024, NULL, 3, NULL);
+    xTaskCreate(CommTask, "CommTask", 1024, NULL, 2, NULL);
+
 //    xTaskCreate(statusPrintTask, "statusPrintTask", 800, NULL, 1, NULL);
     kernel_started = true;
     vTaskStartScheduler();
@@ -555,7 +558,6 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-//  hi2c1.Init.ClockSpeed = 333000;
   hi2c1.Init.ClockSpeed = 400000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
@@ -571,6 +573,40 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.ClockSpeed = 400000;
+  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
 
 }
 
@@ -856,12 +892,12 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-  /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+  /* DMA1_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+  /* DMA1_Stream7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
@@ -893,7 +929,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, NRF24_CE_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, NRF24_CE_Pin|LD3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LD1_Pin */
   GPIO_InitStruct.Pin = LD1_Pin;
@@ -915,15 +951,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(NRF24_CSN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_CE_Pin LD3_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = NRF24_CE_Pin|LD3_Pin|LD2_Pin;
+  /*Configure GPIO pins : NRF24_CE_Pin LD3_Pin */
+  GPIO_InitStruct.Pin = NRF24_CE_Pin|LD3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_IRQ_Pin MPU_IRQ_Pin QMC_IRQ_Pin PB14 */
-  GPIO_InitStruct.Pin = NRF24_IRQ_Pin|MPU_IRQ_Pin|QMC_IRQ_Pin|GPIO_PIN_14;
+  /*Configure GPIO pins : QMC_IRQ_Pin PB14 */
+  GPIO_InitStruct.Pin = QMC_IRQ_Pin|GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

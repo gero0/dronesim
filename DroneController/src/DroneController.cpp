@@ -28,11 +28,12 @@ void DroneController::update(float dt) {
         position.z = 0;
     }
 
-    if(radar_altitude < 0.2){
+    if(altitude < 0.1){
         yaw_setpoint = rotation.yaw;
-        if(altitude_setpoint < 0.0f){
-            altitude_setpoint = 0.0f;
-        }
+    }
+
+    if(altitude_setpoint < 0.0f){
+        altitude_setpoint = 0.0f;
     }
 
     control_update(dt);
@@ -113,7 +114,12 @@ void DroneController::yaw_raw_input(float input){
 
 
 void DroneController::set_yaw(float sp) {
-//    yaw_setpoint = normalize_angle(sp);
+    if(sp < -M_PI){
+        sp += 2.0f * M_PI;
+    }
+    else if(sp > M_PI){
+        sp -= 2.0f * M_PI;
+    }
     yaw_setpoint = sp;
 }
 
@@ -299,17 +305,16 @@ void DroneController::roll_input(float input) {
 }
 
 void DroneController::yaw_input(float input) {
-//    input = std::clamp(input, -1.0f, 1.0f);
-//    if(mode == ControlMode::Angle){
-//        set_yaw(input * yaw_constant);
-//    }else{
-//        yaw_rate_setpoint = input * max_dps_yaw;
-//    }
-//
-//    yaw_raw_input(input * yaw_raw_constant);
     if(std::abs(input) < 0.1f){
         input = 0.0f;
     }
+    input = std::clamp(input, -1.0f, 1.0f);
+//    if(mode == ControlMode::Angle){
+//        set_yaw(yaw_setpoint - (input * yaw_constant));
+//    }else{
+//        yaw_rate_setpoint = -input * max_dps_yaw;
+//    }
+
     yaw_rate_setpoint = -input * max_dps_yaw;
 }
 

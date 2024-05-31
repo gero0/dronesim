@@ -64,8 +64,8 @@ void AHRS::init_fusion() {
             .gain = 0.5f,
             .gyroscopeRange = 1000,
             .accelerationRejection = 10.0f,
-            .magneticRejection = 10.0f,
-//        .recoveryTriggerPeriod = 5 * AHRS_SAMPLE_RATE, /* 5 seconds */
+//            .magneticRejection = 10.0f,
+//        .recoveryTriggerPeriod = 1 * AHRS_SAMPLE_RATE, /* 5 seconds */
             .recoveryTriggerPeriod = 0 /* 5 seconds */
     };
 
@@ -200,13 +200,10 @@ Vector3 AHRS::get_acceleration() {
     x = abs(x) > threshold ? x : 0;
     y = abs(y) > threshold ? y : 0;
     z = abs(z) > threshold ? z : 0;
-    //    Vector3 acc_global = body_to_earth({x,y,z}, rotation_current);
     return {x, y, z};
-    //    return acc_global;
 }
 
 void AHRS::update(float dt) {
-    //TODO: data ready check
     if (!initialized) {
         return;
     }
@@ -228,10 +225,22 @@ void AHRS::update(float dt) {
     if(qmc_dataready){
         int16_t temp[3];
         qmc_read_all_axes(temp);
+        float x_ut = ((float) temp[0] / 32767.0f) * 8.0f * 100.0f;
+        float y_ut = ((float) temp[1] / 32767.0f) * 8.0f * 100.0f;
+        float z_ut = ((float) temp[2] / 32767.0f) * 8.0f * 100.0f;
+
+        float X = x_ut - mag_bias[0];
+        float Y = y_ut - mag_bias[1];
+        float Z = z_ut - mag_bias[2];
+
+        float X_corr = mag_matrix[0][0] * X + mag_matrix[0][1] * Y + mag_matrix[0][2] * Z;
+        float Y_corr = mag_matrix[1][0] * X + mag_matrix[1][1] * Y + mag_matrix[1][2] * Z;
+        float Z_corr = mag_matrix[2][0] * X + mag_matrix[2][1] * Y + mag_matrix[2][2] * Z;
+
         magnetometer = {
-                static_cast<float>(-temp[1]), static_cast<float>(temp[0]),
-                static_cast<float>(temp[2])
+                -Y_corr, X_corr, Z_corr
         };
+
         qmc_dataready = false;
         qmc_timestamp = current_time;
     }
@@ -261,7 +270,6 @@ void AHRS::update(float dt) {
     if(current_time - vl5_timestamp >= 1000){
         vl5_broken = true;
     }
-
 
     if(radar_altitude < 0.1f && !vl5_broken){
         altitude = radar_altitude;

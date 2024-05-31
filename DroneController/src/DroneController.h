@@ -137,8 +137,9 @@ public:
 
     void set_control_mode(ControlMode mode);
 
-private:
     SensorReader *sensor_reader;
+private:
+
 
     ControlMode mode = ControlMode::Angle;
 
@@ -146,7 +147,7 @@ private:
 
     const float max_angle = (30.0f / 180.0f) * M_PI;
     const float max_dps = 250.0f;
-    const float max_dps_yaw = 120.0f;
+    const float max_dps_yaw = 45.0f;
     const float yaw_raw_constant = 0.5;
     const float yaw_constant = 0.1f;
     const float altitude_input_const = 0.4;
@@ -160,7 +161,7 @@ private:
 
     PID pitch_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
     PID roll_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
-    PID yaw_pid{0.01f, 0.0f, 0.0f, -1.0f, 1.0f};
+    PID yaw_pid{1.0f, 0.0f, 0.0f, -1.0, 1.0f, true};
 
     PID pitch_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
     PID roll_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};

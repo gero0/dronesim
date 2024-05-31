@@ -14,11 +14,11 @@ struct PidTunings{
 
 class PID {
 public:
-    PID(float Kp, float Ki, float Kd, float min, float max)
-            : Kp(Kp), Ki(Ki), Kd(Kd), totalMin(min), windupMin(min), totalMax(max), windupMax(max) {}
+    PID(float Kp, float Ki, float Kd, float min, float max, bool angle_wrap = false)
+            : Kp(Kp), Ki(Ki), Kd(Kd), totalMin(min), windupMin(min), totalMax(max), windupMax(max), angleWrap(angle_wrap) {}
 
-    PID(float Kp, float Ki, float Kd, float min, float max, float windMin, float windMax)
-            : Kp(Kp), Ki(Ki), Kd(Kd), totalMin(min), windupMin(windMin), totalMax(max), windupMax(windMax) {}
+    PID(float Kp, float Ki, float Kd, float min, float max, float windMin, float windMax, bool angle_wrap = false)
+            : Kp(Kp), Ki(Ki), Kd(Kd), totalMin(min), windupMin(windMin), totalMax(max), windupMax(windMax), angleWrap(angle_wrap) {}
 
     float update(float setpoint, float process_value, float dt);
 
@@ -48,6 +48,8 @@ private:
     float windupMin = 0.0f;
     float totalMin = 0.0f;
     float totalMax = 1.0f;
+
+    bool angleWrap;
 };
 
 
