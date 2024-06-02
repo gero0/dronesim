@@ -147,7 +147,7 @@ private:
 
     const float max_angle = (30.0f / 180.0f) * M_PI;
     const float max_dps = 250.0f;
-    const float max_dps_yaw = 45.0f;
+    const float max_dps_yaw = 120.0f;
     const float yaw_raw_constant = 0.5;
     const float yaw_constant = 0.1f;
     const float altitude_input_const = 0.4;

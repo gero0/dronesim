@@ -56,6 +56,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 void rtos_delay(uint32_t ms);
+void rtos_yield();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

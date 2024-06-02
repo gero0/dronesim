@@ -158,48 +158,33 @@ void StartDefaultTask(void *argument);
 volatile bool debug_log_cmplt = true;
 uint8_t uart_recv_byte;
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    /* USER CODE BEGIN Callback 0 */
-
-    /* USER CODE END Callback 0 */
-
-    /* USER CODE BEGIN Callback 1 */
-    if (htim == &htim10) {
-        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        ahrs.madgwick_update();
-    }
-    /* USER CODE END Callback 1 */
-}
-
-
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c){
-  if(hi2c == &hi2c1) {
-    i2c_tx_complete_callback();
-  }
+    if(hi2c == &hi2c2) {
+        i2c_tx_complete_callback();
+    }
 }
 
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef* hi2c) {
-  if(hi2c == &hi2c1) {
-    i2c_tx_complete_callback();
-  }
+    if(hi2c == &hi2c2) {
+        i2c_tx_complete_callback();
+    }
 }
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef* hi2c) {
-  if(hi2c == &hi2c1) {
-    i2c_rx_complete_callback();
-  }
+    if(hi2c == &hi2c2) {
+        i2c_rx_complete_callback();
+    }
 }
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
-  if(hi2c == &hi2c1) {
-    i2c_rx_complete_callback();
-  }
+    if(hi2c == &hi2c2) {
+        i2c_rx_complete_callback();
+    }
 }
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c) {
-  if(hi2c == &hi2c1) {
-    i2c_error_callback();
-  }
+    if(hi2c == &hi2c2) {
+        i2c_error_callback();
+    }
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
@@ -230,6 +215,14 @@ void rtos_delay(uint32_t Time) {
         vTaskDelay(Time / portTICK_RATE_MS);
     }else {
         HAL_Delay(Time);
+    }
+}
+
+void rtos_yield(){
+    if(kernel_started){
+        osThreadYield();
+    }else{
+        __NOP();
     }
 }
 
@@ -286,6 +279,15 @@ void init_motors() {
         controller.update(dt);
         prev_time = now;
         xSemaphoreGive(controller_mutex);
+    }
+
+    vTaskDelete(NULL);
+}
+
+[[noreturn]] void AltitudeSensorsTask(void* pvParameters) {
+    while (true) {
+        ahrs.altitude_update(controller_mutex);
+        rtos_delay(1);
     }
 
     vTaskDelete(NULL);
@@ -390,12 +392,13 @@ int main(void)
 
     //start UART communication with GPS module
     HAL_UART_Receive_IT(&huart1, &uart_recv_byte, 1);
-    //start updating madgwick filter in regular intervals
-//    HAL_TIM_Base_Start_IT(&htim10);
+
 
     xTaskCreate(ControlTask, "ControlTask", 1024, NULL, 3, NULL);
+    xTaskCreate(AltitudeSensorsTask, "AltitudeSensorTask", 800, NULL, 3, NULL);
     xTaskCreate(CommTask, "CommTask", 1024, NULL, 2, NULL);
 
+    volatile int size = xPortGetFreeHeapSize();
 //    xTaskCreate(statusPrintTask, "statusPrintTask", 800, NULL, 1, NULL);
     kernel_started = true;
     vTaskStartScheduler();

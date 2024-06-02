@@ -12,6 +12,8 @@
 #include "vl53l0x_api.h"
 #include "bme280.h"
 #include "arm_math.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 class AHRS : public SensorReader {
 public:
@@ -19,8 +21,6 @@ public:
                        I2C_HandleTypeDef *vl5_i2c, I2C_HandleTypeDef *bme_i2c);
 
     bool calibrate();
-
-    void madgwick_update();
 
     Rotation get_rotation() override;
 
@@ -42,16 +42,14 @@ public:
 
     void qmc_ready();
 
+    void altitude_update(SemaphoreHandle_t controller_mutex);
+
 private:
+    void madgwick_update(float dt);
+
     bool initialized = false;
     volatile float gyro_dps[3];
-    const float g_const = 9.81;
 
-    const signed char orientation[9] = {1, 0, 0,
-                                        0, 1, 0,
-                                        0, 0, 1};
-
-    static const int averaging_len = 64;
     Vector3 acceleration_current{};
 
     Rotation rotation_current{};
@@ -62,7 +60,7 @@ private:
     FusionVector magnetometer{.0f, .0f, .0f};
     FusionAhrs ahrs{};
 
-    VL53L0X_Dev_t vl53l0x_c{}; // center module
+    VL53L0X_Dev_t vl53l0x_c{};
     VL53L0X_DEV Dev = &vl53l0x_c;
 
     uint32_t bme_period = 0;

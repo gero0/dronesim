@@ -17,7 +17,6 @@ extern "C" {
 #include "mpu_helpers.h"
 #include "qmc5883l.h"
 #include "bme_interface.h"
-#include "FreeRTOS.h"
 #include "task.h"
 
 constexpr int AHRS_SAMPLE_RATE = 993;
@@ -154,7 +153,7 @@ bme280_data AHRS::get_pressure(uint32_t period, bme280_dev *dev) {
     return comp_data;
 }
 
-void AHRS::madgwick_update() {
+void AHRS::madgwick_update(float dt) {
     FusionVector gyro_filtered;
     FusionVector acc_filtered;
 
@@ -171,11 +170,11 @@ void AHRS::madgwick_update() {
     angular_rate = {gyroscope.axis.y, gyroscope.axis.z, gyroscope.axis.x};
 
     if(!mag_broken){
-        FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 1.0 / AHRS_SAMPLE_RATE);
+        FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, dt);
     }
     else{
         //failsafe when QMC randomly stops working
-        FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 1.0 / AHRS_SAMPLE_RATE);
+        FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
     }
 
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
@@ -245,44 +244,7 @@ void AHRS::update(float dt) {
         qmc_timestamp = current_time;
     }
 
-    if(current_time - qmc_timestamp >= 1000){
-        mag_broken = true;
-    }
-
-    if (current_time - bme_timestamp >= 100) {
-        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
-        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-        auto new_altitude = static_cast<float>(alt);
-        vertical_speed = (new_altitude - abs_altitude) / (0.1f);
-        abs_altitude = new_altitude;
-        bme_timestamp = current_time;
-
-        if (vl5_dataready) {
-            VL53L0X_RangingMeasurementData_t RangingMeasurementData;
-            VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
-            VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
-            radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
-            vl5_dataready = false;
-            vl5_timestamp = current_time;
-        }
-    }
-
-    if(current_time - vl5_timestamp >= 1000){
-        vl5_broken = true;
-    }
-
-    if(radar_altitude < 0.1f && !vl5_broken){
-        altitude = radar_altitude;
-        base_altitude = abs_altitude - altitude;
-    }
-    else if (radar_altitude < 0.8f && ! vl5_broken) {
-        altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
-        base_altitude = abs_altitude - altitude;
-    }else {
-        altitude = abs_altitude - base_altitude;
-    }
-
-    madgwick_update();
+    madgwick_update(dt);
 }
 
 
@@ -308,4 +270,58 @@ void AHRS::vl5_ready() {
 
 void AHRS::qmc_ready() {
     qmc_dataready = true;
+}
+
+void AHRS::altitude_update(SemaphoreHandle_t controller_mutex) {
+    if(!initialized){
+        return;
+    }
+    size_t current_time = xTaskGetTickCount();
+
+    if (current_time - bme_timestamp >= (bme_period / 1000)) {
+        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
+        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
+        auto new_altitude = static_cast<float>(alt);
+
+        xSemaphoreTake(controller_mutex, portMAX_DELAY);
+        vertical_speed = (new_altitude - abs_altitude) / (0.1f);
+        abs_altitude = new_altitude;
+        bme_timestamp = current_time;
+        xSemaphoreGive(controller_mutex);
+    }
+
+    if (vl5_dataready) {
+        VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
+        VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+
+        xSemaphoreTake(controller_mutex, portMAX_DELAY);
+        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
+        vl5_dataready = false;
+        vl5_timestamp = current_time;
+        xSemaphoreGive(controller_mutex);
+    }
+
+    xSemaphoreTake(controller_mutex, portMAX_DELAY);
+
+    if(radar_altitude < 0.1f && !vl5_broken){
+        altitude = radar_altitude;
+        base_altitude = abs_altitude - altitude;
+    }
+    else if (radar_altitude < 0.8f && ! vl5_broken) {
+        altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
+        base_altitude = abs_altitude - altitude;
+    }else {
+        altitude = abs_altitude - base_altitude;
+    }
+
+    if(current_time - qmc_timestamp >= 1000){
+        mag_broken = true;
+    }
+
+    if(current_time - vl5_timestamp >= 1000){
+        vl5_broken = true;
+    }
+
+    xSemaphoreGive(controller_mutex);
 }
