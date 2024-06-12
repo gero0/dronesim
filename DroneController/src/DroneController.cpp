@@ -48,7 +48,7 @@ void DroneController::control_update(float dt) {
     if(mode == ControlMode::Angle){
         pitch_rate_setpoint = pitch_pid.update(pitch_setpoint, rotation.pitch, dt) * max_dps;
         roll_rate_setpoint =  roll_pid.update(roll_setpoint, rotation.roll, dt) * max_dps;
-//        yaw_rate_setpoint = yaw_pid.update(yaw_setpoint, rotation.yaw, dt) * max_dps_yaw;
+        yaw_rate_setpoint = yaw_pid.update(yaw_setpoint, rotation.yaw, dt) * max_dps_yaw;
     }else{
         pitch_pid.update(pitch_setpoint, rotation.pitch, dt);
         roll_pid.update(roll_setpoint, rotation.roll, dt);
@@ -309,13 +309,13 @@ void DroneController::yaw_input(float input) {
         input = 0.0f;
     }
     input = std::clamp(input, -1.0f, 1.0f);
-//    if(mode == ControlMode::Angle){
-//        set_yaw(yaw_setpoint - (input * yaw_constant));
-//    }else{
-//        yaw_rate_setpoint = -input * max_dps_yaw;
-//    }
+    if(mode == ControlMode::Angle){
+        set_yaw(yaw_setpoint - (input * yaw_constant));
+    }else{
+        yaw_rate_setpoint = -input * max_dps_yaw;
+    }
 
-    yaw_rate_setpoint = -input * max_dps_yaw;
+//    yaw_rate_setpoint = -input * max_dps_yaw;
 }
 
 void DroneController::thrust_input(float input) {

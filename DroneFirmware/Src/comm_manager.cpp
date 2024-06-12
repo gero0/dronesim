@@ -240,62 +240,62 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
             case DataRequest:
                 response_state = ResponseState::Full;
                 break;
-            case SetTuningsPR: {
-                float Pkp = *(float *) (&msg.data[0]);
-                float Pki = *(float *) (&msg.data[4]);
-                float Pkd = *(float *) (&msg.data[8]);
-                float Rkp = *(float *) (&msg.data[12]);
-                float Rki = *(float *) (&msg.data[16]);
-                float Rkd = *(float *) (&msg.data[20]);
-
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->set_pitch_tunings({Pkp, Pki, Pkd});
-                controller->set_roll_tunings({Rkp, Rki, Rkd});
-                xSemaphoreGive(controller_mutex);
-            }
-                break;
-            case SetTuningsYA: {
-                float Ykp = *(float *) (&msg.data[0]);
-                float Yki = *(float *) (&msg.data[4]);
-                float Ykd = *(float *) (&msg.data[8]);
-                float Tkp = *(float *) (&msg.data[12]);
-                float Tki = *(float *) (&msg.data[16]);
-                float Tkd = *(float *) (&msg.data[20]);
-
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->set_yaw_tunings({Ykp, Yki, Ykd});
-                controller->set_altitude_tunings({Tkp, Tki, Tkd});
-                xSemaphoreGive(controller_mutex);
-            }
-                break;
-            case SetTuningsPrRr: {
-                float Prkp = *(float *) (&msg.data[0]);
-                float Prki = *(float *) (&msg.data[4]);
-                float Prkd = *(float *) (&msg.data[8]);
-                float Rrkp = *(float *) (&msg.data[12]);
-                float Rrki = *(float *) (&msg.data[16]);
-                float Rrkd = *(float *) (&msg.data[20]);
-
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->set_pitch_rate_tunings({Prkp, Prki, Prkd});
-                controller->set_roll_rate_tunings({Rrkp, Rrki, Rrkd});
-                xSemaphoreGive(controller_mutex);
-            }
-                break;
-            case SetTuningsYrVs: {
-                float Yrkp = *(float *) (&msg.data[0]);
-                float Yrki = *(float *) (&msg.data[4]);
-                float Yrkd = *(float *) (&msg.data[8]);
-                float Vskp = *(float *) (&msg.data[12]);
-                float Vski = *(float *) (&msg.data[16]);
-                float Vskd = *(float *) (&msg.data[20]);
-
-                xSemaphoreTake(controller_mutex, portMAX_DELAY);
-                controller->set_yaw_rate_tunings({Yrkp, Yrki, Yrkd});
-                controller->set_vs_tunings({Vskp, Vski, Vskd});
-                xSemaphoreGive(controller_mutex);
-            }
-                break;
+//            case SetTuningsPR: {
+//                float Pkp = *(float *) (&msg.data[0]);
+//                float Pki = *(float *) (&msg.data[4]);
+//                float Pkd = *(float *) (&msg.data[8]);
+//                float Rkp = *(float *) (&msg.data[12]);
+//                float Rki = *(float *) (&msg.data[16]);
+//                float Rkd = *(float *) (&msg.data[20]);
+//
+//                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                controller->set_pitch_tunings({Pkp, Pki, Pkd});
+//                controller->set_roll_tunings({Rkp, Rki, Rkd});
+//                xSemaphoreGive(controller_mutex);
+//            }
+//                break;
+//            case SetTuningsYA: {
+//                float Ykp = *(float *) (&msg.data[0]);
+//                float Yki = *(float *) (&msg.data[4]);
+//                float Ykd = *(float *) (&msg.data[8]);
+//                float Tkp = *(float *) (&msg.data[12]);
+//                float Tki = *(float *) (&msg.data[16]);
+//                float Tkd = *(float *) (&msg.data[20]);
+//
+//                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                controller->set_yaw_tunings({Ykp, Yki, Ykd});
+//                controller->set_altitude_tunings({Tkp, Tki, Tkd});
+//                xSemaphoreGive(controller_mutex);
+//            }
+//                break;
+//            case SetTuningsPrRr: {
+//                float Prkp = *(float *) (&msg.data[0]);
+//                float Prki = *(float *) (&msg.data[4]);
+//                float Prkd = *(float *) (&msg.data[8]);
+//                float Rrkp = *(float *) (&msg.data[12]);
+//                float Rrki = *(float *) (&msg.data[16]);
+//                float Rrkd = *(float *) (&msg.data[20]);
+//
+//                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                controller->set_pitch_rate_tunings({Prkp, Prki, Prkd});
+//                controller->set_roll_rate_tunings({Rrkp, Rrki, Rrkd});
+//                xSemaphoreGive(controller_mutex);
+//            }
+//                break;
+//            case SetTuningsYrVs: {
+//                float Yrkp = *(float *) (&msg.data[0]);
+//                float Yrki = *(float *) (&msg.data[4]);
+//                float Yrkd = *(float *) (&msg.data[8]);
+//                float Vskp = *(float *) (&msg.data[12]);
+//                float Vski = *(float *) (&msg.data[16]);
+//                float Vskd = *(float *) (&msg.data[20]);
+//
+//                xSemaphoreTake(controller_mutex, portMAX_DELAY);
+//                controller->set_yaw_rate_tunings({Yrkp, Yrki, Yrkd});
+//                controller->set_vs_tunings({Vskp, Vski, Vskd});
+//                xSemaphoreGive(controller_mutex);
+//            }
+//                break;
             default:
                 break;
         }

@@ -165,7 +165,7 @@ private:
 
     PID pitch_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
     PID roll_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
-    PID yaw_rate_pid{0.003f, 0.0f, 0.0f, -1.0f, 1.0f};
+    PID yaw_rate_pid{0.003f, 0.0f, 0.0f, -0.25f, 0.25f};
 
 
     float yaw_raw = 0.0f;

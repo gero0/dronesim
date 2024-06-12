@@ -29,7 +29,6 @@
 #include <AHRS.h>
 
 #include "BLDCController.h"
-#include "MotorDriverMock.h"
 #include "DroneController.h"
 #include "FreeRTOSConfig.h"
 #include "message.h"
@@ -115,8 +114,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == QMC_IRQ_Pin) {
         ahrs.qmc_ready();
     }
-    if (GPIO_Pin == VL5_IRQ_Pin) {
-        ahrs.vl5_ready();
+
+    if (GPIO_Pin == ECHO_Pin) {
+        ahrs.hc_isr();
     }
 
     __NOP();
@@ -376,7 +376,7 @@ int main(void)
         emergency_stop(1);
     }
     rtos_delay(1000);
-    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c2, &hi2c2);
+    bool ok = ahrs.init_hardware(&hi2c1, &hi2c1, &hi2c2);
     if (!ok) {
         printf("Could not initialize MPU!\r\n");
         emergency_stop(2);
@@ -393,6 +393,7 @@ int main(void)
     //start UART communication with GPS module
     HAL_UART_Receive_IT(&huart1, &uart_recv_byte, 1);
 
+    HAL_TIM_Base_Start(&htim11);
 
     xTaskCreate(ControlTask, "ControlTask", 1024, NULL, 3, NULL);
     xTaskCreate(AltitudeSensorsTask, "AltitudeSensorTask", 800, NULL, 3, NULL);
@@ -932,7 +933,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(NRF24_CSN_GPIO_Port, NRF24_CSN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, NRF24_CE_Pin|LD3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, NRF24_CE_Pin|TRIG_Pin|LD3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LD1_Pin */
   GPIO_InitStruct.Pin = LD1_Pin;
@@ -954,12 +955,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(NRF24_CSN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF24_CE_Pin LD3_Pin */
-  GPIO_InitStruct.Pin = NRF24_CE_Pin|LD3_Pin;
+  /*Configure GPIO pins : NRF24_CE_Pin TRIG_Pin LD3_Pin */
+  GPIO_InitStruct.Pin = NRF24_CE_Pin|TRIG_Pin|LD3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ECHO_Pin */
+  GPIO_InitStruct.Pin = ECHO_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(ECHO_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : QMC_IRQ_Pin PB14 */
   GPIO_InitStruct.Pin = QMC_IRQ_Pin|GPIO_PIN_14;
@@ -974,6 +981,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(VL5_IRQ_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 

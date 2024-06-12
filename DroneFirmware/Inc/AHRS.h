@@ -9,16 +9,16 @@
 #include "algebra.h"
 #include "SensorReader.h"
 #include <Fusion.h>
-#include "vl53l0x_api.h"
 #include "bme280.h"
 #include "arm_math.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "hcsr04_core.h"
 
 class AHRS : public SensorReader {
 public:
     bool init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
-                       I2C_HandleTypeDef *vl5_i2c, I2C_HandleTypeDef *bme_i2c);
+                       I2C_HandleTypeDef *bme_i2c);
 
     bool calibrate();
 
@@ -38,9 +38,9 @@ public:
 
     void update(float dt) override;
 
-    void vl5_ready();
-
     void qmc_ready();
+
+    void hc_isr();
 
     void altitude_update(SemaphoreHandle_t controller_mutex);
 
@@ -60,15 +60,14 @@ private:
     FusionVector magnetometer{.0f, .0f, .0f};
     FusionAhrs ahrs{};
 
-    VL53L0X_Dev_t vl53l0x_c{};
-    VL53L0X_DEV Dev = &vl53l0x_c;
-
     uint32_t bme_period = 0;
     size_t bme_timestamp = 0;
     size_t qmc_timestamp = 0;
-    size_t vl5_timestamp = 0;
     bme280_dev bme_dev{};
     bme280_settings bme_settings{};
+
+    HCSR04_Ctx hc_driver;
+    size_t last_hc_measurement_ts = 0;
 
     float altitude = 0.0f;
     float vertical_speed = 0.0f;
@@ -81,13 +80,10 @@ private:
 
     //For those sensors that like to stop cooperating sometimes for no reason
     bool mag_broken = false;
-    bool vl5_broken = false;
 
     bool init_mpu(I2C_HandleTypeDef *mpu_i2c);
 
     void init_fusion();
-
-    void init_vl5(I2C_HandleTypeDef *vl5_i2c) const;
 
     bool init_bme(I2C_HandleTypeDef *bme_i2c);
 
@@ -96,31 +92,12 @@ private:
     static constexpr int num_alt_samples = 4;
     double alt_samples[num_alt_samples];
 
-    volatile bool vl5_dataready = false;
     volatile bool qmc_dataready = false;
 
     static constexpr int fir_block_size = 1;
-//    static constexpr int fir_length = 64;
     static constexpr int fir_length = 32;
 
     //FS = 993Hz, FC=20HZ FIR LPF
-//    float32_t firCoeff[fir_length] = {
-//            -0.0006441707702596293, -0.0006021449189092179, -0.000571487607069365, -0.0005360928947526213,
-//            -0.00047564286102582266, -0.0003662810145966364, -0.0001814979266249004, 0.00010680188364875711,
-//            0.0005270917988435571, 0.0011069211575542516, 0.0018715725624149412, 0.002842734891923391,
-//            0.004037249494516885, 0.00546598561199099, 0.0071328972059114155, 0.009034307170505148,
-//            0.011158456636983343, 0.01348534702985119, 0.015986891129009067, 0.018627377089989995, 0.02136423669043036,
-//            0.024149096538044656, 0.026929079127321173, 0.02964830997808964, 0.0322495780917248, 0.03467609001574128,
-//            0.03687325322594478, 0.03879042252949271, 0.040382543866083684, 0.04161163322842563, 0.042448034313893775,
-//            0.0428714067249028, 0.0428714067249028, 0.042448034313893775, 0.04161163322842563, 0.040382543866083684,
-//            0.03879042252949271, 0.03687325322594478, 0.03467609001574128, 0.0322495780917248, 0.029648309978089638,
-//            0.02692907912732117, 0.024149096538044642, 0.02136423669043036, 0.018627377089989988, 0.015986891129009067,
-//            0.013485347029851184, 0.011158456636983343, 0.009034307170505145, 0.0071328972059114095,
-//            0.005465985611990989, 0.004037249494516881, 0.002842734891923391, 0.0018715725624149397,
-//            0.0011069211575542516, 0.0005270917988435567, 0.00010680188364875697, -0.0001814979266249002,
-//            -0.0003662810145966359, -0.00047564286102582266, -0.0005360928947526213, -0.000571487607069365,
-//            -0.0006021449189092179, -0.0006441707702596293,
-//    };
     float32_t firCoeff[fir_length] = {
             0.002484477921641184, 0.003098999325658232, 0.004479906737840293, 0.006765294571123855,
             0.010031322764461066, 0.01428087522631932, 0.01943785657013609, 0.025347822154755437, 0.03178510297174657,

@@ -3,7 +3,6 @@
 //
 
 #include <cmath>
-#include <vl53l0x_platform.h>
 #include "AHRS.h"
 
 #define GYRO_FSR 1000
@@ -18,16 +17,17 @@ extern "C" {
 #include "qmc5883l.h"
 #include "bme_interface.h"
 #include "task.h"
+#include "hcsr04_core.h"
 
 constexpr int AHRS_SAMPLE_RATE = 993;
 
-bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c, I2C_HandleTypeDef *vl5_i2c,
+bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
                          I2C_HandleTypeDef *bme_i2c) {
     bool result = init_mpu(mpu_i2c);
     result &= qmc_init(qmc_i2c);
 
     init_fusion();
-    init_vl5(vl5_i2c);
+    HCSR04_init(&hc_driver);
 
     result &= init_bme(bme_i2c);
 
@@ -70,26 +70,6 @@ void AHRS::init_fusion() {
 
     FusionAhrsInitialise(&ahrs);
     FusionAhrsSetSettings(&ahrs, &settings);
-}
-
-void AHRS::init_vl5(I2C_HandleTypeDef *vl5_i2c) const {
-    uint8_t VhvSettings;
-    uint8_t PhaseCal;
-    uint32_t refSpadCount;
-    uint8_t isApertureSpads;
-
-    Dev->I2cDevAddr = 0x52;
-    Dev->I2cHandle = vl5_i2c;
-
-    VL53L0X_WaitDeviceBooted(Dev);
-    VL53L0X_DataInit(Dev);
-    VL53L0X_StaticInit(Dev);
-    VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
-    VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
-    VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
-    VL53L0X_SetMeasurementTimingBudgetMicroSeconds(Dev, 30000);
-    VL53L0X_EnableInterruptMask(Dev, 1);
-    VL53L0X_StartMeasurement(Dev);
 }
 
 bool AHRS::init_bme(I2C_HandleTypeDef *bme_i2c) {
@@ -244,6 +224,10 @@ void AHRS::update(float dt) {
         qmc_timestamp = current_time;
     }
 
+    if(current_time - qmc_timestamp >= 1000){
+        mag_broken = true;
+    }
+
     madgwick_update(dt);
 }
 
@@ -264,10 +248,6 @@ float AHRS::get_vs(){
     return vertical_speed;
 }
 
-void AHRS::vl5_ready() {
-    vl5_dataready = true;
-}
-
 void AHRS::qmc_ready() {
     qmc_dataready = true;
 }
@@ -284,44 +264,53 @@ void AHRS::altitude_update(SemaphoreHandle_t controller_mutex) {
         auto new_altitude = static_cast<float>(alt);
 
         xSemaphoreTake(controller_mutex, portMAX_DELAY);
+        altitude = abs_altitude - base_altitude;
         vertical_speed = (new_altitude - abs_altitude) / (0.1f);
         abs_altitude = new_altitude;
         bme_timestamp = current_time;
         xSemaphoreGive(controller_mutex);
     }
 
-    if (vl5_dataready) {
-        VL53L0X_RangingMeasurementData_t RangingMeasurementData;
-        VL53L0X_GetRangingMeasurementData(Dev, &RangingMeasurementData);
-        VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
-
-        xSemaphoreTake(controller_mutex, portMAX_DELAY);
-        radar_altitude = static_cast<float>(RangingMeasurementData.RangeMilliMeter) / 1000.0f;
-        vl5_dataready = false;
-        vl5_timestamp = current_time;
-        xSemaphoreGive(controller_mutex);
+    if (current_time - last_hc_measurement_ts > 150) {
+        last_hc_measurement_ts = current_time;
+        HCSR04_init(&hc_driver);
+        return;
     }
+
+    if (HCSR04_get_state(&hc_driver) == HCSR04_ERROR) {
+        HCSR04_init(&hc_driver);
+        return;
+    }
+
+    if (HCSR04_get_state(&hc_driver) != HCSR04_READY) {
+        return;
+    }
+
+    float dist = HCSR04_get_float(&hc_driver);
+    HCSR04_start_measurement(&hc_driver);
+    last_hc_measurement_ts = current_time;
+
+    bool valid_radar = (dist >= 0.0 && dist <= 1.2);
 
     xSemaphoreTake(controller_mutex, portMAX_DELAY);
 
-    if(radar_altitude < 0.1f && !vl5_broken){
+    radar_altitude = dist;
+
+    if(radar_altitude < 0.1f && valid_radar){
         altitude = radar_altitude;
         base_altitude = abs_altitude - altitude;
     }
-    else if (radar_altitude < 0.8f && ! vl5_broken) {
+    else if (radar_altitude < 0.8f && valid_radar) {
         altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
         base_altitude = abs_altitude - altitude;
-    }else {
-        altitude = abs_altitude - base_altitude;
     }
-
-    if(current_time - qmc_timestamp >= 1000){
-        mag_broken = true;
-    }
-
-    if(current_time - vl5_timestamp >= 1000){
-        vl5_broken = true;
-    }
-
     xSemaphoreGive(controller_mutex);
+}
+
+void AHRS::hc_isr() {
+    if (HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin)) {
+        HCSR04_handle_echo_rising(&hc_driver);
+    } else {
+        HCSR04_handle_echo_falling(&hc_driver);
+    }
 }
