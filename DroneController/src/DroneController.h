@@ -10,6 +10,12 @@
 #include "MotorDriver.h"
 #include "PID.h"
 
+enum class ThrustMode{
+    Direct,
+    VsHold,
+//    AltHold
+};
+
 enum class ControlMode{
     Rate,
     Angle
@@ -97,6 +103,8 @@ public:
 
     bool stop();
 
+    bool is_all_nominal();
+
     void hover();
 
     void RTO();
@@ -137,10 +145,16 @@ public:
 
     void set_control_mode(ControlMode mode);
 
+    void set_thrust_mode(ThrustMode tmode);
+
     SensorReader *sensor_reader;
+
+    ControlMode get_current_cmode();
+
+    ThrustMode get_current_tmode();
 private:
 
-
+    ThrustMode thrust_mode = ThrustMode::Direct;
     ControlMode mode = ControlMode::Angle;
 
     bool is_stopped_v = false;

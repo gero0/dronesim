@@ -314,3 +314,7 @@ void AHRS::hc_isr() {
         HCSR04_handle_echo_falling(&hc_driver);
     }
 }
+
+bool AHRS::is_all_nominal() {
+    return !mag_broken;
+}

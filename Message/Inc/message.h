@@ -13,6 +13,7 @@ extern "C" {
 #define MSG_HOLD_CMD 4
 #define MSG_RTO_CMD 8
 #define MSG_STOP_CMD 16
+#define MSG_SWITCHALT_CMD 32
 
 typedef enum MessageType {
     Input = 0,

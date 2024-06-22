@@ -92,8 +92,11 @@ size_t rx_buffer_index = 0;
 uint8_t rx_type = 0;
 uint8_t rx_len = 0;
 
+
+
 Debouncer sw1_debouncer;
 Debouncer sw_stop_debouncer;
+Debouncer sw_modeswitch_debouncer;
 
 volatile uint8_t nrf24_rx_flag, nrf24_tx_flag, nrf24_mr_flag;
 
@@ -152,10 +155,13 @@ bool estop_cmd_flag = false;
 bool hold_cmd_flag = false;
 bool rto_cmd_flag = false;
 bool stop_cmd_flag = false;
+bool switch_alt_cmd_flag = false;
 
 uint16_t adc_readings[4];
 
 bool connection_ok = false;
+
+char status_string [5] = "^DA-";
 
 float to_degrees(float a){
     return a / 3.14f * 180.0f;
@@ -165,6 +171,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if(htim == &htim4){
         db_update(&sw1_debouncer);
         db_update(&sw_stop_debouncer);
+        db_update(&sw_modeswitch_debouncer);
     }
 
 }
@@ -192,9 +199,8 @@ typedef void (*Display_t)(char[], char[]);
 void display_draw_summary(char line_1[], char line_2[]){
     char is_connected = connection_ok ? '^' : '!';
     //TODO: replace with status received from drone
-    const char* status = "OK";
     float yaw = angles[1];
-    sprintf(line_1, "%c HDG: %.0f %s", is_connected, to_degrees(yaw), status);
+    sprintf(line_1, "%cHDG:%3.0f %s", is_connected, to_degrees(yaw), status_string);
     sprintf(line_2, "ALT: %.1f (%.1f)", press_altitude, radar_altitude);
 }
 
@@ -280,12 +286,16 @@ uint8_t encode_commands(){
     if(stop_cmd_flag){
         commands |= MSG_STOP_CMD;
     }
+    if(switch_alt_cmd_flag){
+        commands |= MSG_SWITCHALT_CMD;
+    }
 
     land_cmd_flag = false;
     estop_cmd_flag = false;
     hold_cmd_flag = false;
     rto_cmd_flag = false;
     stop_cmd_flag = false;
+    switch_alt_cmd_flag = false;
 
     return commands;
 }
@@ -430,6 +440,7 @@ void update_values(Message msg) {
             memcpy(&yaw_sp, &msg.data[12], sizeof(float));
             memcpy(&roll_sp, &msg.data[16], sizeof(float));
             memcpy(&abs_altitude, &msg.data[20], sizeof(float));
+            memcpy(&status_string, &msg.data[24], 5);
             break;
         case GetTuningsPR:
             memcpy(pitch_tunings, &msg.data[0], sizeof(float) * 3);
@@ -610,6 +621,7 @@ int main(void)
     HAL_UART_Receive_IT (&huart3, &recv_byte, 1);
     sw1_debouncer = db_init(JOY1_SW_GPIO_Port, JOY1_SW_Pin, true, 5);
     sw_stop_debouncer = db_init(BTN_0_GPIO_Port, BTN_0_Pin, false, 5);
+    sw_modeswitch_debouncer = db_init(BTN_1_GPIO_Port, BTN_1_Pin, false, 5);
 
     HAL_Delay(1000);
 
@@ -664,6 +676,10 @@ int main(void)
             if(currentScreen > DisplayScreen_Setpoints){
                 currentScreen = DisplayScreen_Summary;
             }
+        }
+
+        if (db_is_pressed(&sw_modeswitch_debouncer) && db_state_changed(&sw_modeswitch_debouncer)){
+            switch_alt_cmd_flag = true;
         }
 
         if (db_is_pressed(&sw_stop_debouncer)){

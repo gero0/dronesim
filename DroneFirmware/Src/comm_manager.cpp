@@ -75,18 +75,29 @@ void CommManager::prepareResponse() {
             auto speeds = controller->get_motor_speeds();
             auto setpoints = controller->get_setpoints();
             float abs = controller->get_absolute_altitude();
+            ControlMode cmode = controller->get_current_cmode();
+            ThrustMode tmode = controller->get_current_tmode();
+            bool ok = controller->is_all_nominal();
             xSemaphoreGive(controller_mutex);
             uint8_t speeds_int[4];
             for (int i = 0; i < 4; i++) {
                 speeds_int[i] = static_cast<uint8_t>(speeds[i] * 100.0f);
             }
             output_msg.type = GetStatus;
+
+            char ok_c = ok ? '^' : '!';
+            char cmode_c = (cmode == ControlMode::Angle) ? 'A' : 'R';
+            char tmode_c = (tmode == ThrustMode::Direct) ? 'D' : 'V';
+            char pad = '-';
+            char status_str[5] = {ok_c, cmode_c, tmode_c, pad, 0};
+
             memcpy(&output_msg.data[0], speeds_int, sizeof(uint8_t) * 4);
             memcpy(&output_msg.data[4], &setpoints.v_thrust, sizeof(float));
             memcpy(&output_msg.data[8], &setpoints.v_pitch, sizeof(float));
             memcpy(&output_msg.data[12], &setpoints.v_yaw, sizeof(float));
             memcpy(&output_msg.data[16], &setpoints.v_roll, sizeof(float));
             memcpy(&output_msg.data[20], &abs, sizeof(float));
+            memcpy(&output_msg.data[24], &status_str, sizeof(status_str));
         }
         break;
         case GetTuningsPR:{
@@ -216,7 +227,6 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                     //controller->RTO();
                 }
                 if(commands & MSG_STOP_CMD){
-                    //controller->RTO();
                     if(timestamp - last_stop_cmd_received >= stop_cmd_threshold){
                         if(controller->is_stopped()){
                             controller->start();
@@ -224,6 +234,14 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                             controller->stop();
                         }
                         last_stop_cmd_received = timestamp;
+                    }
+                }
+                if(commands & MSG_SWITCHALT_CMD){
+                    ThrustMode mode = controller->get_current_tmode();
+                    if(mode == ThrustMode::Direct){
+                        controller->set_thrust_mode(ThrustMode::VsHold);
+                    }else{
+                        controller->set_thrust_mode(ThrustMode::Direct);
                     }
                 }
 

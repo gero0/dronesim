@@ -17,6 +17,7 @@ public:
     virtual float get_radar_altitude() = 0;
     virtual float get_absolute_altitude() = 0;
     virtual void update(float dt) = 0;
+    virtual bool is_all_nominal() = 0;
 };
 
 #endif //DRONESIMPROJECT_SENSORREADER_H

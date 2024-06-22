@@ -38,6 +38,8 @@ public:
 
     void update(float dt) override;
 
+    bool is_all_nominal() override;
+
     void qmc_ready();
 
     void hc_isr();

@@ -332,3 +332,19 @@ void DroneController::set_control_mode(ControlMode mode) {
 Vector3 DroneController::get_acceleration(){
     return sensor_reader->get_acceleration();
 }
+
+ControlMode DroneController::get_current_cmode() {
+    return mode;
+}
+
+ThrustMode DroneController::get_current_tmode() {
+    return thrust_mode;
+}
+
+void DroneController::set_thrust_mode(ThrustMode tmode) {
+    thrust_mode = tmode;
+}
+
+bool DroneController::is_all_nominal() {
+    return sensor_reader->is_all_nominal();
+}
