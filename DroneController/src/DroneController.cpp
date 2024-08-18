@@ -28,22 +28,19 @@ void DroneController::update(float dt) {
         position.z = 0;
     }
 
-    if(altitude < 0.1){
+    if(altitude < 0.05){
         yaw_setpoint = rotation.yaw;
-    }
-
-    if(altitude_setpoint < 0.0f){
-        altitude_setpoint = 0.0f;
     }
 
     control_update(dt);
 }
 
 void DroneController::control_update(float dt) {
-    float vs_setpoint = altitude_pid.update(altitude_setpoint, altitude, dt);
-    v_thrust = vs_pid.update(vs_setpoint, (altitude - prev_altitude) / dt, dt);
-
-    v_thrust = direct_thrust_value;
+    float vs_offset = hover_thrust;
+    v_thrust = altitude_pid.update(altitude_setpoint, altitude, dt) + vs_offset;
+    if(thrust_mode == ThrustMode::Direct){
+        v_thrust = direct_thrust_value;
+    }
 
     if(mode == ControlMode::Angle){
         pitch_rate_setpoint = pitch_pid.update(pitch_setpoint, rotation.pitch, dt) * max_dps;
@@ -322,7 +319,12 @@ void DroneController::thrust_input(float input) {
     if( std::abs(input) < 0.1){
         input = 0;
     }
-    set_direct_thrust(direct_thrust_value + input * thrust_input_const);
+    if(thrust_mode == ThrustMode::Direct){
+        set_direct_thrust(direct_thrust_value + input * thrust_input_const);
+    }else{
+        altitude_setpoint = altitude_setpoint + input * altitude_input_const;
+        altitude_setpoint = std::clamp(altitude_setpoint, min_altitude_sp, 10.0f);
+    }
 }
 
 void DroneController::set_control_mode(ControlMode mode) {
@@ -347,4 +349,18 @@ void DroneController::set_thrust_mode(ThrustMode tmode) {
 
 bool DroneController::is_all_nominal() {
     return sensor_reader->is_all_nominal();
+}
+
+void DroneController::switch_to_direct_thrust() {
+    if(thrust_mode != ThrustMode::Direct){
+        set_thrust_mode(ThrustMode::Direct);
+        set_direct_thrust(0.6);
+    }
+}
+
+void DroneController::switch_to_althold() {
+    set_thrust_mode(ThrustMode::AltHold);
+    if(altitude > 0.5){
+        altitude_setpoint = altitude;
+    }
 }

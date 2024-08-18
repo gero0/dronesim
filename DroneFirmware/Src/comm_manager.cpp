@@ -87,7 +87,7 @@ void CommManager::prepareResponse() {
 
             char ok_c = ok ? '^' : '!';
             char cmode_c = (cmode == ControlMode::Angle) ? 'A' : 'R';
-            char tmode_c = (tmode == ThrustMode::Direct) ? 'D' : 'V';
+            char tmode_c = (tmode == ThrustMode::Direct) ? 'D' : 'H';
             char pad = '-';
             char status_str[5] = {ok_c, cmode_c, tmode_c, pad, 0};
 
@@ -239,19 +239,17 @@ CommState CommManager::receive_message(Message *output_msg, TickType_t *last_con
                 if(commands & MSG_SWITCHALT_CMD){
                     ThrustMode mode = controller->get_current_tmode();
                     if(mode == ThrustMode::Direct){
-                        controller->set_thrust_mode(ThrustMode::VsHold);
+                        controller->switch_to_althold();
                     }else{
-                        controller->set_thrust_mode(ThrustMode::Direct);
+                        controller->switch_to_direct_thrust();
                     }
                 }
 
                 controller->pitch_input(pitch_input);
                 controller->roll_input(roll_input);
                 controller->yaw_input(yaw_input);
+                controller->thrust_input(alt_input);
 
-                if (timestamp > last_altitude_input) {
-                    controller->thrust_input(alt_input);
-                }
                 xSemaphoreGive(controller_mutex);
             }
             break;

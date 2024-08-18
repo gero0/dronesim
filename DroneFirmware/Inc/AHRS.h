@@ -47,7 +47,9 @@ public:
     void altitude_update(SemaphoreHandle_t controller_mutex);
 
 private:
+    size_t last_altitude_ts = 0;
     void madgwick_update(float dt);
+    float hc04_measure(size_t current_time);
 
     bool initialized = false;
     volatile float gyro_dps[3];

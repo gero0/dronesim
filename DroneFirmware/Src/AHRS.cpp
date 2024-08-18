@@ -2,8 +2,8 @@
 // Created by gero on 8/9/23.
 //
 
-#include <cmath>
 #include "AHRS.h"
+#include <cmath>
 
 #define GYRO_FSR 1000
 #define ACC_FSR 8
@@ -12,17 +12,18 @@ extern "C" {
 #include "inv_mpu.h"
 }
 
-#include "mpu_interface.h"
-#include "mpu_helpers.h"
-#include "qmc5883l.h"
 #include "bme_interface.h"
-#include "task.h"
 #include "hcsr04_core.h"
+#include "mpu_helpers.h"
+#include "mpu_interface.h"
+#include "qmc5883l.h"
+#include "task.h"
 
 constexpr int AHRS_SAMPLE_RATE = 993;
 
-bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
-                         I2C_HandleTypeDef *bme_i2c) {
+bool AHRS::init_hardware(I2C_HandleTypeDef* mpu_i2c, I2C_HandleTypeDef* qmc_i2c,
+    I2C_HandleTypeDef* bme_i2c)
+{
     bool result = init_mpu(mpu_i2c);
     result &= qmc_init(qmc_i2c);
 
@@ -43,7 +44,8 @@ bool AHRS::init_hardware(I2C_HandleTypeDef *mpu_i2c, I2C_HandleTypeDef *qmc_i2c,
     return initialized;
 }
 
-bool AHRS::init_mpu(I2C_HandleTypeDef *mpu_i2c) {
+bool AHRS::init_mpu(I2C_HandleTypeDef* mpu_i2c)
+{
     mpu_interface_register(mpu_i2c);
     int_param_s int_param;
     if (const bool result = mpu_init(&int_param) == 0; !result) {
@@ -57,22 +59,24 @@ bool AHRS::init_mpu(I2C_HandleTypeDef *mpu_i2c) {
     return true;
 }
 
-void AHRS::init_fusion() {
+void AHRS::init_fusion()
+{
     constexpr FusionAhrsSettings settings = {
-            .convention = FusionConventionNwu,
-            .gain = 0.5f,
-            .gyroscopeRange = 1000,
-            .accelerationRejection = 10.0f,
-//            .magneticRejection = 10.0f,
-//        .recoveryTriggerPeriod = 1 * AHRS_SAMPLE_RATE, /* 5 seconds */
-            .recoveryTriggerPeriod = 0 /* 5 seconds */
+        .convention = FusionConventionNwu,
+        .gain = 0.5f,
+        .gyroscopeRange = 1000,
+        .accelerationRejection = 10.0f,
+        //            .magneticRejection = 10.0f,
+        //        .recoveryTriggerPeriod = 1 * AHRS_SAMPLE_RATE, /* 5 seconds */
+        .recoveryTriggerPeriod = 0 /* 5 seconds */
     };
 
     FusionAhrsInitialise(&ahrs);
     FusionAhrsSetSettings(&ahrs, &settings);
 }
 
-bool AHRS::init_bme(I2C_HandleTypeDef *bme_i2c) {
+bool AHRS::init_bme(I2C_HandleTypeDef* bme_i2c)
+{
     bme280_i2c_init(bme_i2c);
 
     bme_dev.read = bme280_i2c_read;
@@ -88,8 +92,8 @@ bool AHRS::init_bme(I2C_HandleTypeDef *bme_i2c) {
     bme280_get_sensor_settings(&bme_settings, &bme_dev);
     bme_settings.filter = BME280_FILTER_COEFF_16;
     bme_settings.osr_h = BME280_OVERSAMPLING_1X;
-    bme_settings.osr_p = BME280_OVERSAMPLING_16X;
-    bme_settings.osr_t = BME280_OVERSAMPLING_2X;
+    bme_settings.osr_p = BME280_OVERSAMPLING_1X;
+    bme_settings.osr_t = BME280_OVERSAMPLING_1X;
     bme_settings.standby_time = BME280_STANDBY_TIME_0_5_MS;
     bme280_set_sensor_settings(BME280_SEL_ALL_SETTINGS, &bme_settings, &bme_dev);
     bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme_dev);
@@ -102,7 +106,8 @@ bool AHRS::init_bme(I2C_HandleTypeDef *bme_i2c) {
     return true;
 }
 
-bool AHRS::calibrate() {
+bool AHRS::calibrate()
+{
     if (!initialized) {
         return false;
     }
@@ -112,8 +117,8 @@ bool AHRS::calibrate() {
     }
 
     for (int i = 0; i < 3; i++) {
-        gyro_bias[i] = static_cast<long>(static_cast<float>(gyro_bias[i]) * 32.8f); //convert to +-1000dps
-        accel_bias[i] *= 2048.f; //convert to +-16G
+        gyro_bias[i] = static_cast<long>(static_cast<float>(gyro_bias[i]) * 32.8f); // convert to +-1000dps
+        accel_bias[i] *= 2048.f; // convert to +-16G
         accel_bias[i] = accel_bias[i] >> 16;
         gyro_bias[i] = gyro_bias[i] >> 16;
     }
@@ -124,16 +129,18 @@ bool AHRS::calibrate() {
     return true;
 }
 
-bme280_data AHRS::get_pressure(uint32_t period, bme280_dev *dev) {
+bme280_data AHRS::get_pressure(uint32_t period, bme280_dev* dev)
+{
     uint8_t status_reg;
-    bme280_data comp_data{};
+    bme280_data comp_data {};
 
     int8_t rslt = bme280_get_sensor_data(BME280_PRESS, &comp_data, dev);
 
     return comp_data;
 }
 
-void AHRS::madgwick_update(float dt) {
+void AHRS::madgwick_update(float dt)
+{
     FusionVector gyro_filtered;
     FusionVector acc_filtered;
 
@@ -147,42 +154,45 @@ void AHRS::madgwick_update(float dt) {
     gyroscope = gyro_filtered;
     accelerometer = acc_filtered;
 
-    angular_rate = {gyroscope.axis.y, gyroscope.axis.z, gyroscope.axis.x};
+    angular_rate = { gyroscope.axis.y, gyroscope.axis.z, gyroscope.axis.x };
 
-    if(!mag_broken){
+    if (!mag_broken) {
         FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, dt);
-    }
-    else{
-        //failsafe when QMC randomly stops working
+    } else {
+        // failsafe when QMC randomly stops working
         FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dt);
     }
 
     const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 
     rotation_current = {
-            static_cast<float>(euler.angle.pitch / 180.0f * M_PI), static_cast<float>(euler.angle.yaw / 180.0f * M_PI),
-            static_cast<float>(euler.angle.roll / 180.0f * M_PI)
+        static_cast<float>(euler.angle.pitch / 180.0f * M_PI), static_cast<float>(euler.angle.yaw / 180.0f * M_PI),
+        static_cast<float>(euler.angle.roll / 180.0f * M_PI)
     };
 }
 
-Rotation AHRS::get_rotation() {
+Rotation AHRS::get_rotation()
+{
     return rotation_current;
 }
 
-Rotation AHRS::get_angular_rate() {
+Rotation AHRS::get_angular_rate()
+{
     return angular_rate;
 }
 
-Vector3 AHRS::get_acceleration() {
+Vector3 AHRS::get_acceleration()
+{
     auto [x, y, z] = acceleration_current;
     constexpr float threshold = 0.1;
     x = abs(x) > threshold ? x : 0;
     y = abs(y) > threshold ? y : 0;
     z = abs(z) > threshold ? z : 0;
-    return {x, y, z};
+    return { x, y, z };
 }
 
-void AHRS::update(float dt) {
+void AHRS::update(float dt)
+{
     if (!initialized) {
         return;
     }
@@ -194,19 +204,19 @@ void AHRS::update(float dt) {
     accel_to_gs(accel_raw, accel_gs, ACC_FSR);
 
     mpu_get_gyro_reg(gyro_raw, nullptr);
-    gyro_to_dps(gyro_raw, const_cast<float *>(gyro_dps), GYRO_FSR);
+    gyro_to_dps(gyro_raw, const_cast<float*>(gyro_dps), GYRO_FSR);
 
-    accelerometer = {-accel_gs[0], -accel_gs[1], accel_gs[2]};
-    gyroscope = {-gyro_dps[0], -gyro_dps[1], gyro_dps[2]};
+    accelerometer = { -accel_gs[0], -accel_gs[1], accel_gs[2] };
+    gyroscope = { -gyro_dps[0], -gyro_dps[1], gyro_dps[2] };
 
     size_t current_time = xTaskGetTickCount();
 
-    if(qmc_dataready){
+    if (qmc_dataready) {
         int16_t temp[3];
         qmc_read_all_axes(temp);
-        float x_ut = ((float) temp[0] / 32767.0f) * 8.0f * 100.0f;
-        float y_ut = ((float) temp[1] / 32767.0f) * 8.0f * 100.0f;
-        float z_ut = ((float) temp[2] / 32767.0f) * 8.0f * 100.0f;
+        float x_ut = ((float)temp[0] / 32767.0f) * 8.0f * 100.0f;
+        float y_ut = ((float)temp[1] / 32767.0f) * 8.0f * 100.0f;
+        float z_ut = ((float)temp[2] / 32767.0f) * 8.0f * 100.0f;
 
         float X = x_ut - mag_bias[0];
         float Y = y_ut - mag_bias[1];
@@ -217,97 +227,124 @@ void AHRS::update(float dt) {
         float Z_corr = mag_matrix[2][0] * X + mag_matrix[2][1] * Y + mag_matrix[2][2] * Z;
 
         magnetometer = {
-                -Y_corr, X_corr, Z_corr
+            -Y_corr, X_corr, Z_corr
         };
 
         qmc_dataready = false;
         qmc_timestamp = current_time;
     }
 
-    if(current_time - qmc_timestamp >= 1000){
+    if (current_time - qmc_timestamp >= 1000) {
         mag_broken = true;
     }
 
     madgwick_update(dt);
 }
 
-
-float AHRS::get_altitude() {
+float AHRS::get_altitude()
+{
     return altitude;
 }
 
-float AHRS::get_radar_altitude() {
+float AHRS::get_radar_altitude()
+{
     return radar_altitude;
 }
 
-float AHRS::get_absolute_altitude() {
+float AHRS::get_absolute_altitude()
+{
     return abs_altitude;
 }
 
-float AHRS::get_vs(){
+float AHRS::get_vs()
+{
     return vertical_speed;
 }
 
-void AHRS::qmc_ready() {
+void AHRS::qmc_ready()
+{
     qmc_dataready = true;
 }
 
-void AHRS::altitude_update(SemaphoreHandle_t controller_mutex) {
-    if(!initialized){
-        return;
-    }
-    size_t current_time = xTaskGetTickCount();
-
-    if (current_time - bme_timestamp >= (bme_period / 1000)) {
-        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
-        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
-        auto new_altitude = static_cast<float>(alt);
-
-        xSemaphoreTake(controller_mutex, portMAX_DELAY);
-        altitude = abs_altitude - base_altitude;
-        vertical_speed = (new_altitude - abs_altitude) / (0.1f);
-        abs_altitude = new_altitude;
-        bme_timestamp = current_time;
-        xSemaphoreGive(controller_mutex);
-    }
-
-    if (current_time - last_hc_measurement_ts > 150) {
+float AHRS::hc04_measure(size_t current_time)
+{
+    if (current_time - last_hc_measurement_ts > 200) {
         last_hc_measurement_ts = current_time;
         HCSR04_init(&hc_driver);
-        return;
+        return -1.0f;
     }
 
     if (HCSR04_get_state(&hc_driver) == HCSR04_ERROR) {
         HCSR04_init(&hc_driver);
-        return;
+        return -1.0f;
     }
 
     if (HCSR04_get_state(&hc_driver) != HCSR04_READY) {
-        return;
+        return -1.0f;
     }
 
     float dist = HCSR04_get_float(&hc_driver);
     HCSR04_start_measurement(&hc_driver);
     last_hc_measurement_ts = current_time;
 
-    bool valid_radar = (dist >= 0.0 && dist <= 1.2);
+    return dist;
+}
+
+void AHRS::altitude_update(SemaphoreHandle_t controller_mutex)
+{
+    if (!initialized) {
+        return;
+    }
+    size_t current_time = xTaskGetTickCount();
+
+    bool baro_valid = false;
+    float baro_abs = 0.0f;
+
+    if (current_time - bme_timestamp >= (bme_period / 1000)) {
+        const double pressure = get_pressure(bme_period, &bme_dev).pressure;
+        const double alt = 44330.0 * (1 - std::pow(pressure / 101325.0, 1 / 5.255));
+        baro_abs = static_cast<float>(alt);
+        baro_valid = true;
+    }
+
+    float dist = hc04_measure(current_time);
+    bool radar_valid = (dist >= 0.0 && dist <= 1.8);
+    //    bool radar_valid = (dist >= 0.0 && dist <= 0.3);
+
+    if (!radar_valid && !baro_valid) {
+        return;
+    }
 
     xSemaphoreTake(controller_mutex, portMAX_DELAY);
+    float prev_alt = altitude;
 
-    radar_altitude = dist;
+    if (baro_valid) {
+        bme_timestamp = current_time;
+        abs_altitude = baro_abs;
+        altitude = abs_altitude - base_altitude;
+        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    }
 
-    if(radar_altitude < 0.1f && valid_radar){
-        altitude = radar_altitude;
+    if (radar_valid) {
+        radar_altitude = dist;
+        if (radar_altitude < 0.1f) {
+            altitude = radar_altitude;
+        } else {
+            altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
+        }
         base_altitude = abs_altitude - altitude;
     }
-    else if (radar_altitude < 0.8f && valid_radar) {
-        altitude = radar_altitude * abs(cos(rotation_current.pitch) * cos(rotation_current.roll));
-        base_altitude = abs_altitude - altitude;
-    }
+
+    float dt = (float)(current_time - last_altitude_ts) / 1000.0f;
+    vertical_speed = (altitude - prev_alt) / dt;
+
+    last_altitude_ts = current_time;
+
     xSemaphoreGive(controller_mutex);
 }
 
-void AHRS::hc_isr() {
+void AHRS::hc_isr()
+{
     if (HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin)) {
         HCSR04_handle_echo_rising(&hc_driver);
     } else {
@@ -315,6 +352,7 @@ void AHRS::hc_isr() {
     }
 }
 
-bool AHRS::is_all_nominal() {
+bool AHRS::is_all_nominal()
+{
     return !mag_broken;
 }

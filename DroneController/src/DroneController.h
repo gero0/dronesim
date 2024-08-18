@@ -6,14 +6,15 @@
 #define DRONESIMPROJECT_DRONECONTROLLER_H
 
 #include <array>
+#include <cstdint>
 #include "SensorReader.h"
 #include "MotorDriver.h"
 #include "PID.h"
 
 enum class ThrustMode{
     Direct,
-    VsHold,
-//    AltHold
+//    VsHold,
+    AltHold
 };
 
 enum class ControlMode{
@@ -145,7 +146,9 @@ public:
 
     void set_control_mode(ControlMode mode);
 
-    void set_thrust_mode(ThrustMode tmode);
+    void switch_to_direct_thrust();
+
+    void switch_to_althold();
 
     SensorReader *sensor_reader;
 
@@ -153,6 +156,8 @@ public:
 
     ThrustMode get_current_tmode();
 private:
+
+    void set_thrust_mode(ThrustMode tmode);
 
     ThrustMode thrust_mode = ThrustMode::Direct;
     ControlMode mode = ControlMode::Angle;
@@ -164,14 +169,18 @@ private:
     const float max_dps_yaw = 120.0f;
     const float yaw_raw_constant = 0.5;
     const float yaw_constant = 0.1f;
-    const float altitude_input_const = 0.4;
+    const float altitude_input_const = 0.08;
     const float thrust_input_const = 0.025;
+    const float min_altitude_sp = -0.5f;
+    const float hover_thrust = 0.45f;
 
     PID position_x_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
     PID position_y_pid{0.0f, 0.0f, 0.0f, -1.0f, 1.0f};
 
-    PID altitude_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-    PID vs_pid{0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    PID altitude_pid{0.1f, 0.0f, 0.00f, -0.15f, 0.15};
+
+    //Unused
+    PID vs_pid{0.05f, 0.0f, 0.0f, -0.1f, 0.1};
 
     PID pitch_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
     PID roll_pid{0.625f, 0.0f, 0.00f, -1.0f, 1.0f, -1.0, 1.0};
@@ -181,12 +190,13 @@ private:
     PID roll_rate_pid{0.001f, 0.0f, 0.000015f, -1.0f, 1.0f, -1.0, 1.0};
     PID yaw_rate_pid{0.003f, 0.0f, 0.0f, -0.25f, 0.25f};
 
-
+    const float max_vs = 0.5f;
+    float vs_setpoint = 0.0f;
     float yaw_raw = 0.0f;
     float yaw_setpoint = 0.0f;
     float pitch_setpoint = 0.0f;
     float roll_setpoint = 0.0f;
-    float altitude_setpoint = 0.0f;
+    float altitude_setpoint = min_altitude_sp;
 
     float yaw_rate_setpoint = 0.0f;
     float pitch_rate_setpoint = 0.0f;

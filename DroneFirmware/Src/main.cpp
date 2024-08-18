@@ -272,7 +272,7 @@ void init_motors() {
     while (true) {
         HAL_IWDG_Refresh(&hiwdg);
         vTaskDelay(1 / portTICK_RATE_MS);
-        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+        // HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
         const uint32_t now = xTaskGetTickCount();
         const float dt = static_cast<float>(now - prev_time) / 1000.0f;
         xSemaphoreTake(controller_mutex, portMAX_DELAY);
